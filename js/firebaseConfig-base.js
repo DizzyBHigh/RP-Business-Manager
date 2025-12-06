@@ -24,37 +24,37 @@ JavaScriptconst firebaseConfig = {
     appId: "1:123456789:web:abc123def456"
 };
 
-4. Add Firebase to your HTML(paste in <head>)
-    HTML<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+4. make a copy of this file
+    rename it to firebaseConfig.js
+    paste your config at after these instuctions:
+    replacing the existing:
 
-    <script>
-// REPLACE THIS WITH YOUR FIREBASE CONFIG
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
         authDomain: "your-project.firebaseapp.com",
         projectId: "your-project",
         storageBucket: "your-project.appspot.com",
         messagingSenderId: "123456789",
         appId: "1:123456789:web:abc123def456"
-};
+    };
 
-        Save and open the file in your Browser
-        log in with your player name
-        ctrl Shift I to open the browser console
-        type claimManager();
+        Save and open index.html in your Browser
+        log in with your player name you should be promoted to manager
+
+        If you are not then do the following:
+        
+        Ctrl + Shift + I or F12 to open the browser console
+        type claimManager(); in the console
 
         → Click OK on the confirm box
         → Page reloads automatically
         → You are now permanent Manager
 
-        The first time you open the app all your local data should be migrated to the database
-
-
         All players open the same HTML file
         Everyone sees the same warehouse, orders, prices
         Changes appear instantly
-        Works offline and syncs when back online */
+        Works offline and syncs when back online 
+*/
 
 const firebaseConfig = {
     apiKey: "YOUR_API_KEY",
@@ -66,5 +66,7 @@ const firebaseConfig = {
 };
 
 // 1) make a copy of this file
-// 2) add your config
+// 2) replace the above config with your own config
 // 3) save as firebaseConfig.js
+// 4) open index.html
+
