@@ -155,26 +155,26 @@ Firebase Firestore for shared business data
 LocalStorage fallback
 Responsive design (works on desktop and mobile)
 
-How to Use
+## How to Use
 
 Clone or download the repo
 Open firebaseConfig-base.js
 Follow the instructions to create a firebase store
 Add your config to the bottom of the file
-Save as firbaseConfig.js
+Save as firebaseConfig.js
 
 Open index.html in any browser
 Enter your business passphrase (or create one on first use)
 Start managing your RP business!
-
-No server required for single-player use — Firebase is optional for shared/multi-device businesses.
-For Developers / Server Owners
 
 Customize recipes in the Recipe Editor tab
 Set raw material prices in Raw Materials
 Define item categories in Category Manager
 Adjust permissions via the roles document in Firebase
 
+No server required for single-player use — Firebase is optional for shared/multi-device businesses.
+
+For Developers / Server Owners
 Contributing
 Feel free to open issues or pull requests! This tool is built for the RP community.
 Made with ❤️ by DizzyBHigh for the Chip n Cheerful Lumber crew and beyond.
