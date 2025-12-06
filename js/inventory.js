@@ -76,24 +76,29 @@ const Inventory = {
                 </td>
                 <td>
                     ${(() => {
-                    const wh = warehouseStock[item] || 0;
                     const sh = shopStock[item] || 0;
                     const mn = minStock[item] || 0;
                     const needed = Math.max(0, mn - sh);
 
-                    if (needed === 0) return ''; // already enough or more
-                    if (wh === 0) return '<span style="color:#da3633;font-style:italic;"></span>';
+                    // ALWAYS show "Add to Order" if low — even if warehouse is 0 (will be crafted)
+                    const addBtn = needed > 0 ? `
+                            <button class="success small" style="margin-bottom:4px;" onclick="Inventory.addToOrder('${item}', ${needed})">
+                                +${needed} to Order
+                            </button><br>` : '';
 
-                    const canMove = Math.min(needed, wh);
-                    return `<button class="primary small" onclick="Inventory.moveToShop('${item}')">
-        Move ${canMove} to Display
-    </button>`;
+                    // Move to Display only if warehouse has stock
+                    const moveBtn = (needed > 0 && (warehouseStock[item] || 0) > 0) ? `
+                            <button class="primary small" onclick="Inventory.moveToShop('${item}')">
+                                Move ${Math.min(needed, warehouseStock[item] || 0)} to Display
+                            </button>` : '';
+
+                    return addBtn + moveBtn + `
+                            <button class="info small" onclick="Inventory.removeFromShop('${item}')">
+                                Return to Warehouse
+                            </button>`;
                 })()}
-                    <button class="info small" onclick="Inventory.removeFromShop('${item}')">
-                    Return to Warehouse
-                    </button>
                 </td>
-                </tr>`;
+            </tr>`;
         });
 
         // === 2. RAW MATERIALS ON DISPLAY ===
@@ -155,12 +160,23 @@ const Inventory = {
                     <br><small style="color:#888;">shop display</small>
                     </td>
                     <td>
-                    ${low ? `<button class="primary small" onclick="Inventory.moveToShop('${raw}', ${min - shop})">
-                        Move ${min - shop} to Display
-                    </button>` : ''}
-                    <button class="danger small" onclick="Inventory.removeFromShop('${raw}')">
-                        Remove from Shop
-                    </button>
+                        ${low ? (() => {
+                        const needed = Math.max(0, min - shop);
+                        const addBtn = needed > 0 ? `
+                                <button class="success small" style="margin-bottom:4px;" onclick="Inventory.addToOrder('${raw}', ${needed})">
+                                    +${needed} to Order
+                                </button><br>` : '';
+
+                        const moveBtn = (needed > 0 && warehouse > 0) ? `
+                                <button class="primary small" onclick="Inventory.moveToShop('${raw}')">
+                                    Move ${Math.min(needed, warehouse)} to Display
+                                </button>` : '';
+
+                        return addBtn + moveBtn;
+                    })() : ''}
+                        <button class="danger small" onclick="Inventory.removeFromShop('${raw}')">
+                            Remove from Shop
+                        </button>
                     </td>
                 </tr>`;
             });
@@ -199,8 +215,9 @@ const Inventory = {
                     </td>
                     <td colspan="2" style="text-align:center;color:#888;">Not for sale yet</td>
                     <td colspan="2">
-                    <button class="success small" onclick="Inventory.addRawToShop('${raw}')">
-                        + ADD TO SHOP DISPLAY
+                    <button onclick="Inventory.addAllLowStock()" 
+                            style="padding:10px 20px;background:#0c0;color:black;font-weight:bold;border-radius:8px;font-size:16px;margin-left:20px;">
+                        Add All Low Stock to Order
                     </button>
                     </td>
                 </tr>`;
@@ -364,6 +381,64 @@ const Inventory = {
 
         // 7. Refresh UI
         Inventory.render();
+    },
+    // Add this method to your Inventory object
+    addAllLowStock() {
+        const minStock = App.state.minStock || {};
+        const shopStock = App.state.shopStock || {};
+        const warehouseStock = App.state.warehouseStock || {};
+
+        let addedCount = 0;
+        let totalQty = 0;
+
+        Object.keys(minStock).forEach(item => {
+            const min = minStock[item] || 0;
+            const current = shopStock[item] || 0;
+            const needed = Math.max(0, min - current);
+
+            if (needed > 0 && warehouseStock[item] > 0) {
+                const toAdd = Math.min(needed, warehouseStock[item]);
+
+                const existing = App.state.order.find(o => o.item === item);
+                if (existing) {
+                    existing.qty += toAdd;
+                } else {
+                    App.state.order.push({ item, qty: toAdd, tier: "shop" });
+                }
+
+                addedCount++;
+                totalQty += toAdd;
+            }
+        });
+
+        if (addedCount === 0) {
+            showToast("info", "No low stock items need restocking!");
+            return;
+        }
+
+        debouncedSaveOrder?.();
+        Order.renderCurrentOrder();
+        debouncedCalcRun();
+
+        showToast("success", `Added ${addedCount} low stock item${addedCount > 1 ? "s" : ""} (${totalQty} total) to order`);
+        activateTab("order"); // Switch to order tab
+    },
+    addToOrder(item, qty) {
+        qty = parseInt(qty) || 1;
+
+        const existing = App.state.order.find(o => o.item === item);
+        if (existing) {
+            existing.qty += qty;
+        } else {
+            App.state.order.push({ item, qty, tier: "shop" });
+        }
+
+        debouncedSaveOrder?.();
+        Order.renderCurrentOrder();
+        debouncedCalcRun();
+
+        showToast("success", `${qty}× ${item} added to order`);
+        activateTab("order");
     },
 };
 
