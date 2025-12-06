@@ -303,3 +303,17 @@ window.claimManager = async () => {
         setTimeout(() => location.reload(), 1500);
     }
 };
+
+/* function updatePageTitleAndHeader() {
+    if (App.state.businessConfig?.name) {
+        document.title = `${App.state.businessConfig.name} - HSRP Manager`;
+
+        const headerName = document.querySelector('h1');
+        if (headerName) headerName.textContent = App.state.businessConfig.name;
+
+        if (App.state.businessConfig.tagline) {
+            const subtitle = document.querySelector('.subtitle');
+            if (subtitle) subtitle.textContent = App.state.businessConfig.tagline;
+        }
+    }
+} */

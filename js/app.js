@@ -995,6 +995,17 @@ const BusinessManager = {
                 : 'No Passphrase Set';
             securityStatus.style.color = config.passphrase ? '#28a745' : '#ffc107';
         }
+        // ← ADD THESE LINES — UPDATE PAGE TITLE & HEADER
+        if (config.name) {
+            document.title = `${config.name} - HSRP Manager`;
+            const headerName = document.querySelector('h1');
+            if (headerName) headerName.textContent = config.name;
+
+            if (config.tagline) {
+                const subtitle = document.querySelector('.subtitle');
+                if (subtitle) subtitle.textContent = config.tagline;
+            }
+        }
     },
 
     // THIS IS THE NEW PROTECTED SETUP FORM (inline, no modal needed)
@@ -1924,7 +1935,6 @@ document.getElementById("helpToggleBtn")?.addEventListener("click", e => {
     e.stopPropagation();
     toggleTabDescription();
 });
-
 
 
 if (!window._tabOverrideInstalled) {
