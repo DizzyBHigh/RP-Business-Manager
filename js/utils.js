@@ -257,41 +257,49 @@ if (document.readyState === "loading") {
 }
 
 function resolveWarehouseItemToDisplay(itemName, qtyUsedFromWarehouse) {
-            // These are the only crafted items that can come from warehouse and replace raw costs
-            const craftedMapping = {
-                "Varnished Wood": { replaces: ["Wood", "Resin"], displayAs: "Varnished Wood" },
-                "Tanned Leather": { replaces: ["Leather Strap", "Resin"], displayAs: "Tanned Leather" },
-                "Hardened Leather": { replaces: ["Tanned Leather", "Resin"], displayAs: "Hardened Leather" },
-                // Add more crafted items here in the future if needed
-            };
+    // These are the only crafted items that can come from warehouse and replace raw costs
+    const craftedMapping = {
+        "Varnished Wood": { replaces: ["Wood", "Resin"], displayAs: "Varnished Wood" },
+        "Tanned Leather": { replaces: ["Leather Strap", "Resin"], displayAs: "Tanned Leather" },
+        "Hardened Leather": { replaces: ["Tanned Leather", "Resin"], displayAs: "Hardened Leather" },
+        // Add more crafted items here in the future if needed
+    };
 
-            const mapping = craftedMapping[itemName];
-            if (!mapping || qtyUsedFromWarehouse <= 0) return null;
+    const mapping = craftedMapping[itemName];
+    if (!mapping || qtyUsedFromWarehouse <= 0) return null;
 
-            return {
-                name: mapping.displayAs,
-                quantity: qtyUsedFromWarehouse,
-                replaces: mapping.replaces
-            };
-        }
+    return {
+        name: mapping.displayAs,
+        quantity: qtyUsedFromWarehouse,
+        replaces: mapping.replaces
+    };
+}
 
-        // ──────────────────────────────────────────────────────────────
-        // Remove an item directly from the crafting tree
-        // ──────────────────────────────────────────────────────────────
-        function removeOrderItemDirectly(index) {
-            if (showConfirm("Remove this item from the order?")) {
-                App.state.order.splice(index, 1);           // remove from order
-                debouncedSaveOrder();;                           // save to Firebase
-                Order.renderCurrentOrder();                       // refresh order list
-                debouncedCalcRun();                            // instantly refresh the tree & totals
-            }
-        }
+// ──────────────────────────────────────────────────────────────
+// Remove an item directly from the crafting tree
+// ──────────────────────────────────────────────────────────────
+function removeOrderItemDirectly(index) {
+    if (showConfirm("Remove this item from the order?")) {
+        App.state.order.splice(index, 1);           // remove from order
+        debouncedSaveOrder();;                           // save to Firebase
+        Order.renderCurrentOrder();                       // refresh order list
+        debouncedCalcRun();                            // instantly refresh the tree & totals
+    }
+}
 
-        function refreshAllStockLists() {
-            setTimeout(() => {
-                // Also refresh these no matter what (they use allItems() internally)
-                PriceList.render();
-                Order.render();
-                Inventory.render();
-            }, 100);
-        }
+function refreshAllStockLists() {
+    setTimeout(() => {
+        // Also refresh these no matter what (they use allItems() internally)
+        PriceList.render();
+        Order.render();
+        Inventory.render();
+    }, 100);
+}
+// Emergency one-click manager claim (keep this!)
+window.claimManager = async () => {
+    if (confirm("Make yourself permanent Manager?")) {
+        await ROLES_DOC.safeSet({ [playerName]: "manager" }, { merge: true });
+        alert("You are now MANAGER! Reloading…");
+        setTimeout(() => location.reload(), 1500);
+    }
+};
