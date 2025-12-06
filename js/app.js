@@ -103,50 +103,59 @@ const AuthManager = {
     },
 
     // Separate, reusable function – completely outside App scope
+    // Separate, reusable function – completely outside App scope
     async checkBusinessAccess() {
         try {
             const configDoc = await db.collection("business").doc("config").get();
 
-            // ── CASE A: Business not set up yet ─────────────────────
             if (!configDoc.exists) {
-                console.log("No business config → show setup modal");
-                showBusinessSetupModal();
+                // FIRST-TIME SETUP — NO BUSINESS CONFIG
+                console.log("No business config — showing inline setup form");
+
+                // FORCE MANAGER MODE FOR FIRST USER
+                window.myRole = "manager";
+                App.state.role = "manager";
+                applyPermissions();
+
+                // Show the inline form
+                BusinessManager.showSetupForm();
+
+                // CRITICAL: ACTIVATE THE BUSINESS TAB SO THE FORM IS VISIBLE
+                currentSection = "Management";
+                currentTab = "business";
+                document.getElementById("currentSectionBtn").textContent = "Management";
+                buildSectionDropdown();
+                buildHorizontalTabs();
+                activateTab("business");
+
                 return false;
             }
 
             const config = configDoc.data();
             App.state.businessConfig = config;
 
-            // Update page title & header immediately
+            // Update title
             if (config.name) {
-                document.title = `${config.name} - Manager`;
-                document.querySelector('h1').textContent = config.name;
-                if (config.tagline) document.querySelector('.subtitle').textContent = config.tagline;
+                document.title = `${config.name} - HSRP Manager`;
             }
 
-            // Passphrase protection
+            // Passphrase check
             if (config.passphrase) {
                 const savedHash = await getPassphraseHash();
-                const expectedHash = btoa(config.passphrase); // simple base64 – good enough for this use case
+                const expectedHash = btoa(config.passphrase);
 
-                if (savedHash === expectedHash) {
-                    console.log("Passphrase correct → access granted");
-                    return true; // Skip modal entirely
-                } else {
-                    console.log("Passphrase missing or wrong → show modal");
-                    await setPassphraseHash(null); // clear bad data
+                if (savedHash !== expectedHash) {
+                    await setPassphraseHash(null);
                     showPassphraseModal();
                     return false;
                 }
             }
 
-            // ── CASE C: No passphrase set → free access ─────────────
-            console.log("No passphrase required → access granted");
+            App.state.passphraseAuthenticated = true;
             return true;
 
         } catch (err) {
-            console.error("Auth check failed:", err);
-            showToast("fail", "Connection error – please check your internet and refresh.");
+            console.error("Business config check failed:", err);
             return false;
         }
     }
@@ -946,32 +955,18 @@ App.on("roles", () => {
 const BusinessManager = {
     async render() {
         try {
-            console.log('BusinessManager.render() called');
-            await new Promise(resolve => {
-                if (document.getElementById('business')) resolve();
-                else {
-                    const check = setInterval(() => {
-                        if (document.getElementById('business')) {
-                            clearInterval(check);
-                            resolve();
-                        }
-                    }, 100);
-                    setTimeout(() => clearInterval(check), 5000);
-                }
-            });
-
             const businessDoc = await firebase.firestore().collection('business').doc('config').get();
             if (businessDoc.exists) {
                 const config = businessDoc.data();
                 this.displayBusinessInfo(config);
                 this.showManagementSection();
             } else {
-                console.log('No business config - showing setup');
-                this.showSetupForm(); // ← NOW SHOWS INLINE FORM WITH FULL PROTECTION
+                // FIRST-TIME SETUP — SHOW MODAL, NOT INLINE FORM
+                showBusinessSetupModal();
             }
         } catch (error) {
             console.error('Error loading business config:', error);
-            this.showSetupForm();
+            showBusinessSetupModal(); // fallback to modal
         }
     },
 
@@ -1037,7 +1032,7 @@ const BusinessManager = {
         const passphrase = document.getElementById('businessPassphraseInput')?.value.trim();
 
         if (!name) {
-            showToast("fail", 'Please enter a business name');
+            showToast("fail", 'Please enter a business name ', 5000);
             return;
         }
 
@@ -1046,41 +1041,70 @@ const BusinessManager = {
                 name,
                 tagline: tagline || "Managing what you make",
                 passphrase: passphrase || null,
-                configuredBy: App.state.currentUser?.uid || 'unknown',
-                configuredAt: firebase.firestore.FieldValue.serverTimestamp()
+                configuredBy: window.playerName || 'unknown',
+                configuredAt: firebase.firestore.FieldValue.serverTimestamp(),
+                companyId: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
             }, { merge: true });
 
             if (passphrase) await setPassphraseHash(btoa(passphrase));
             else await setPassphraseHash(null);
 
-            showToast("success", `Business "${name}" configured successfully!`);
-            setTimeout(() => this.render(), 1000);
+            showToast("success", `Business "${name}" created successfully!`, 5000);
+
+            // DO NOT CALL this.render() — it will show the form again!
+            // Instead, remove modal and restart app
+            document.getElementById("businessSetupModal")?.remove();
+            AuthManager.start();
         } catch (error) {
             console.error('Error saving business config:', error);
-            showToast("fail", 'Error saving configuration. Please try again.');
+            showToast("fail", 'Error saving configuration. Please try again.', 5000);
         }
     }
 };
-
-// =============================================
-// EVENT LISTENERS — FINAL VERSION
-// =============================================
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
-        const saveBtn = document.getElementById('saveBusinessBtn');
+        // Edit button — show the inline form
         const editBtn = document.getElementById('editBusinessBtn');
-        const cancelBtn = document.getElementById('cancelBusinessBtn');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                console.log("Edit Business Settings clicked");
 
-        if (saveBtn) saveBtn.onclick = () => BusinessManager.save();
-        if (editBtn) editBtn.onclick = () => {
-            document.getElementById('businessInfoDisplay').style.display = 'none';
-            document.getElementById('businessSetupForm').style.display = 'block';
-            setTimeout(() => document.getElementById('businessNameInput')?.focus(), 200);
-        };
-        if (cancelBtn) cancelBtn.onclick = () => BusinessManager.render();
+                // Show the form
+                document.getElementById('businessInfoDisplay')?.style.setProperty('display', 'none', 'important');
+                document.getElementById('businessSetupForm')?.style.setProperty('display', 'block', 'important');
+                document.getElementById('passphraseManagement')?.style.setProperty('display', 'none', 'important');
+                document.getElementById('pendingUsersSection')?.style.setProperty('display', 'none', 'important');
+
+                // Force inputs enabled (in case permissions are blocking)
+                setTimeout(() => {
+                    const inputs = document.querySelectorAll('#businessSetupForm input, #businessSetupForm button');
+                    inputs.forEach(el => {
+                        el.disabled = false;
+                        el.style.pointerEvents = 'auto';
+                    });
+                    document.getElementById('businessNameInput')?.focus();
+                }, 100);
+            });
+        }
+
+        // Save button
+        const saveBtn = document.getElementById('saveBusinessBtn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', async (e) => {
+                e.preventDefault(); // Prevent form submit
+                await BusinessManager.save();
+            });
+        }
+
+        // Cancel button
+        const cancelBtn = document.getElementById('cancelBusinessBtn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                BusinessManager.render();
+            });
+        }
 
         console.log('BusinessManager event listeners attached');
-
     }, 500);
 });
 
@@ -1088,57 +1112,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.BusinessManager = BusinessManager;
 window.businessRender = () => BusinessManager.render();
 
-// =============================================
-// EVENT LISTENERS FOR BUSINESS MANAGER
-// =============================================
-document.addEventListener('DOMContentLoaded', function () {
-    // Wait a bit longer for all elements to load
-    setTimeout(() => {
-        // Save button
-        const saveBtn = document.getElementById('saveBusinessBtn');
-        if (saveBtn) {
-            saveBtn.addEventListener('click', () => BusinessManager.save());
-        }
 
-        // Edit button
-        const editBtn = document.getElementById('editBusinessBtn');
-        if (editBtn) {
-            editBtn.addEventListener('click', () => {
-                document.getElementById('businessInfoDisplay').style.display = 'none';
-                document.getElementById('businessSetupForm').style.display = 'block';
-            });
-        }
-
-        // Cancel button
-        const cancelBtn = document.getElementById('cancelBusinessBtn');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => BusinessManager.render());
-        }
-
-        // Toggle passphrase visibility
-        const toggleBtn = document.getElementById('togglePassphrase');
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', function () {
-                const input = document.getElementById('businessPassphraseInput');
-                if (input) {
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        this.textContent = '🙈';
-                    } else {
-                        input.type = 'password';
-                        this.textContent = '👁';
-                    }
-                }
-            });
-        }
-
-        console.log('✅ BusinessManager event listeners attached');
-    }, 500);
-});
-
-// Make BusinessManager.render globally available
-window.BusinessManager = BusinessManager;
-window.businessRender = () => BusinessManager.render();
 
 // =============================================
 // Pending Users Management System
