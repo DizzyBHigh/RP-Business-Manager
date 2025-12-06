@@ -169,6 +169,14 @@ async function checkBusinessConfiguration() {
         const configDoc = await db.collection("business").doc("config").get();
 
         if (!configDoc.exists) {
+            // FIRST-TIME SETUP — NO BUSINESS CONFIG
+            console.log("No business config — first-time user");
+
+            // CRITICAL: Set role to manager for first user BEFORE showing modal
+            window.myRole = "manager";
+            App.state.role = "manager";
+            applyPermissions(); // ← This unlocks everything
+
             showBusinessSetupModal();
             return false;
         }
@@ -176,7 +184,7 @@ async function checkBusinessConfiguration() {
         const config = configDoc.data();
         App.state.businessConfig = config;
 
-        // Title update
+        // Update title
         if (config.name) {
             document.title = `${config.name} - HSRP Manager`;
         }
@@ -187,7 +195,6 @@ async function checkBusinessConfiguration() {
             const expectedHash = btoa(config.passphrase);
 
             if (savedHash !== expectedHash) {
-                // Clear invalid hash and force re-auth
                 await setPassphraseHash(null);
                 showPassphraseModal();
                 return false;
@@ -205,6 +212,11 @@ async function checkBusinessConfiguration() {
 
 // Business Setup Modal — Beautiful & Functional
 function showBusinessSetupModal() {
+    // FORCE MANAGER MODE FOR FIRST-TIME SETUP
+    window.myRole = "manager";
+    App.state.role = "manager";
+    applyPermissions(); // ← This unlocks the Business Manager tab
+
     const modal = document.createElement("div");
     modal.id = "businessSetupModal";
     modal.innerHTML = `
@@ -488,9 +500,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     console.log('✅ Enhanced passphrase management event listeners attached');
 });
-
-
-
 
 // Update page title with business name
 function updatePageTitle() {

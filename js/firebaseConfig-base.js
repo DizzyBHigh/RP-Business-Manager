@@ -30,12 +30,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // EVERYTHING under /business is allowed for any logged-in user (including anonymous)
-    match /business/{any=**} {
-      allow read, write: if request.auth != null;
-    }
+match /business/{businessId}/{path=} {
+  allow read, write: if request.auth != null;
+}
 
-    // Deny everything else in the entire project
-    match /{document=**} {
+// Deny everything else in the database
+    match /{document=} {
       allow read, write: if false;
     }
   }
@@ -74,12 +74,12 @@ service cloud.firestore {
 */
 
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "your-project.firebaseapp.com",
-    projectId: "your-project",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "123456789",
-    appId: "1:123456789:web:abc123def456"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project",
+  storageBucket: "your-project.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc123def456"
 };
 
 // 1) make a copy of this file
