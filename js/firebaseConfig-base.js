@@ -24,6 +24,23 @@ JavaScriptconst firebaseConfig = {
     appId: "1:123456789:web:abc123def456"
 };
 
+In the Rules Tab on firebase add this ruleset
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // EVERYTHING under /business is allowed for any logged-in user (including anonymous)
+    match /business/{any=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Deny everything else in the entire project
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
 4. make a copy of this file
     rename it to firebaseConfig.js
     paste your config at after these instuctions:
