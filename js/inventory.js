@@ -188,8 +188,8 @@ const Inventory = {
 
         if (rawNotOnDisplay.length > 0 && (!search || rawNotOnDisplay.some(r => r.toLowerCase().includes(search)))) {
             tbody.innerHTML += `<tr><td colspan="8" style="background:#222;color:#aaa;padding:12px;text-align:center;font-weight:bold;">
-                RAW MATERIALS NOT ON DISPLAY
-            </td></tr>`;
+                    RAW MATERIALS NOT ON DISPLAY
+                </td></tr>`;
 
             rawNotOnDisplay.forEach(raw => {
                 if (search && !raw.toLowerCase().includes(search)) return;
@@ -199,28 +199,27 @@ const Inventory = {
                 totalWeightWarehouse += warehouse * weightPerUnit;
 
                 tbody.innerHTML += `
-                <tr style="background:rgba(100,150,255,0.08);">
-                    <td><strong>${raw}</strong></td>
-                    <td>Raw Material</td>
-                    <td style="text-align:center;color:#666;">—</td>
-                    <td style="text-align:center;">
-                    <input type="number" min="0"
-                            id="setwarehouse_${raw.replace(/ /g, '_')}"
-                            value="${warehouse}"
-                            class="auto-save-input"
-                            onblur="Inventory.setWarehouseStock('${raw}', this.value)"
-                            onkeypress="if(event.key==='Enter') this.blur()">
-                    <br><small style="color:#888;">warehouse stock</small>
-                    ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${warehouseWeight}kg</small>` : ""}
-                    </td>
-                    <td colspan="2" style="text-align:center;color:#888;">Not for sale yet</td>
-                    <td colspan="2">
-                    <button onclick="Inventory.addAllLowStock()" 
-                            style="padding:10px 20px;background:#0c0;color:black;font-weight:bold;border-radius:8px;font-size:16px;margin-left:20px;">
-                        Add All Low Stock to Order
-                    </button>
-                    </td>
-                </tr>`;
+                    <tr style="background:rgba(100,150,255,0.08);">
+                        <td><strong>${raw}</strong></td>
+                        <td>Raw Material</td>
+                        <td style="text-align:center;color:#666;">—</td>
+                        <td style="text-align:center;">
+                        <input type="number" min="0"
+                                id="setwarehouse_${raw.replace(/ /g, '_')}"
+                                value="${warehouse}"
+                                class="auto-save-input"
+                                onblur="Inventory.setWarehouseStock('${raw}', this.value)"
+                                onkeypress="if(event.key==='Enter') this.blur()">
+                        <br><small style="color:#888;">warehouse stock</small>
+                        ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${warehouseWeight}kg</small>` : ""}
+                        </td>
+                        <td colspan="2" style="text-align:center;color:#888;">Not for sale yet</td>
+                        <td colspan="2">
+                            <button class="success small" onclick="Inventory.addRawToShop('${raw}')">
+                                + Add to Shop Display
+                            </button>
+                        </td>
+                    </tr>`;
             });
         }
 
@@ -259,10 +258,11 @@ const Inventory = {
                         ` : '<span style="color:var(--green);font-weight:bold;">All stocked!</span>'}
 
                         <span id="showAllBtn" style="display:${onlyLow ? 'inline' : 'none'};">
-                        <button style="background:#333;color:#aaa;padding:5px 12px;border-radius:16px;font-size:0.9em;cursor:pointer;"
-                                onclick="Inventory.filterLowStock(false); document.getElementById('inventorySearch').value=''">
-                            Show All Items
-                        </button>
+                        <td colspan="2">
+                            <button class="success small" onclick="Inventory.addRawToShop('${raw}')">
+                                + Add to Shop Display
+                            </button>
+                        </td>
                         </span>
                     </div>
                     `;
@@ -312,12 +312,19 @@ const Inventory = {
     addRawToShop(raw) {
         const min = prompt(`Set minimum shop stock for "${raw}"? (e.g. 20)`, "20");
         const minNum = parseInt(min);
-        if (isNaN(minNum) || minNum < 1) return showToast("fail", "Enter a valid minimum stock");
+        if (isNaN(minNum) || minNum < 1) {
+            showToast("fail", "Enter a valid minimum stock");
+            return;
+        }
+
+        // Initialize properly
         App.state.minStock[raw] = minNum;
         App.state.shopStock[raw] = 0;
+
         App.save("minStock");
         App.save("shopStock");
-        showToast("success", `${raw} added to shop display!\nMinimum stock: ${minNum}`);
+
+        showToast("success", `${raw} added to shop display! Minimum stock: ${minNum}`);
         this.render();
     },
 
@@ -347,17 +354,15 @@ const Inventory = {
 
     moveToShop(item) {
         const warehouse = App.state.warehouseStock[item] || 0;
-        const shop = App.state.shopStock[item] || 0;
+        const shop = App.state.shopStock[item] || 0;  // ← Explicitly default to 0
         const min = App.state.minStock[item] || 0;
 
-        // 1. If shop already meets or exceeds minimum → do nothing
         if (shop >= min) {
             showToast("info", `${item} already has enough on display (${shop}/${min})`);
             return;
         }
 
-        // 2. Calculate how many we actually need to move
-        const needed = min - shop;                    // positive number
+        const needed = min - shop;
         const available = warehouse;
 
         if (available <= 0) {
@@ -365,21 +370,15 @@ const Inventory = {
             return;
         }
 
-        // 3. Don't move more than available OR more than needed
         const toMove = Math.min(needed, available);
 
-        // 4. Actually move
         App.state.warehouseStock[item] = warehouse - toMove;
         App.state.shopStock[item] = shop + toMove;
 
-        // 5. Save
         App.save("warehouseStock");
         App.save("shopStock");
 
-        // 6. Success message
         showToast("success", `Moved ${toMove}× ${item} to shop display (now ${shop + toMove}/${min})`);
-
-        // 7. Refresh UI
         Inventory.render();
     },
     // Add this method to your Inventory object
