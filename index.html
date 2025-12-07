@@ -237,6 +237,30 @@
         <div id="orderItems" style="margin:20px 0;">
 
         </div>
+
+        <!-- DISCOUNT SECTION -->
+        <div id="discountSection"
+            style="margin-top:30px;padding:20px;background:#001122;border-radius:12px;border:2px solid #0af;">
+            <h3 style="color:#0af;margin:0 0 15px;">Discount (optional)</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+                <div>
+                    <label style="display:block;color:#0ff;margin-bottom:8px;font-weight:bold;">Discount Amount
+                        ($)</label>
+                    <input type="number" step="0.01" min="0" id="discountAmount" placeholder="0.00"
+                        style="width:100%;padding:14px;font-size:16px;background:#000;color:white;border:2px solid #0af;border-radius:8px;">
+                </div>
+                <div>
+                    <label style="display:block;color:#0ff;margin-bottom:8px;font-weight:bold;">Reason</label>
+                    <input type="text" id="discountReason" placeholder="e.g. Loyalty discount, Damaged goods"
+                        style="width:100%;padding:14px;font-size:16px;background:#000;color:white;border:2px solid #444;border-radius:8px;">
+                </div>
+            </div>
+            <p style="color:#aaa;margin-top:10px;font-size:14px;">
+                Discount will be subtracted from the final total and shown on the invoice.
+            </p>
+        </div>
+
+
         <div id="orderSummaryContainer"></div>
         <!-- COMPLETE BUTTON -->
         <div style="text-align:center; margin:30px 0;">

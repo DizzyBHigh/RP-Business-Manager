@@ -137,6 +137,8 @@ const Calculator = {
     },
 
     run() {
+        console.log("Calculator.run() STARTED");
+
         // 1. Clear caches once per run
         this.weights = {};
         Calculator.liveToggle = Calculator.liveToggle || {};
@@ -195,45 +197,63 @@ const Calculator = {
             grandSell += sellPrice * o.qty;
 
             invoiceHTML += `<tr>
-                        <td>${o.qty}</td>
-                        <td><strong>${o.item}</strong></td>
-                        <td>${o.tier === "bulk" ? "Bulk" : "Shop"}</td>
-                        <td style="color:#0af;font-weight:bold;">${(o.qty * this.weight(o.item)).toFixed(2)}kg</td>
-                        <td class="profit-only">$${this.cost(o.item).toFixed(2)}</td>
-                        <td>$${sellPrice.toFixed(2)}</td>
-                        <td>$${(sellPrice * o.qty).toFixed(2)}</td>
-                    </tr>`;
+                <td>${o.qty}</td>
+                <td><strong>${o.item}</strong></td>
+                <td>${o.tier === "bulk" ? "Bulk" : "Shop"}</td>
+                <td style="color:#0af;font-weight:bold;">${(o.qty * this.weight(o.item)).toFixed(2)}kg</td>
+                <td class="profit-only">$${this.cost(o.item).toFixed(2)}</td>
+                <td>$${sellPrice.toFixed(2)}</td>
+                <td>$${(sellPrice * o.qty).toFixed(2)}</td>
+            </tr>`;
         });
-
 
         // ──────── RAW MATERIALS TABLE (only if changed) ────────
         for (const [item, qty] of Object.entries(totalRaw)) {
             grandCost += this.cost(item) * qty;
-            //grandSell += this.sellPrice(item) * qty;
         }
 
         const rawTableHTML = this.generateRawTableHTML(totalRaw, finalProductWeight, grandSell);
 
-        const profit = grandSell - grandCost;
-        const profitPct = grandCost > 0 ? (profit / grandCost * 100).toFixed(1) : 0;
+        // === DISCOUNT LOGIC ===
+        const discountAmount = parseFloat(App.state.orderDiscount?.amount || 0) || 0;
+        const discountReason = App.state.orderDiscount?.reason?.trim() || "Discount";
+
+        const profitBeforeDiscount = grandSell - grandCost;
+        const finalTotal = grandSell - discountAmount;
+        const profit = profitBeforeDiscount - discountAmount;
+        const profitPct = grandCost > 0 ? ((profit + discountAmount) / grandCost * 100).toFixed(1) : 0;
+
+        console.log("DISCOUNT CALCULATION:", { grandSell, grandCost, discountAmount, finalTotal, profit });
 
         const summaryData = {
             grandCost: grandCost,
             grandSell: grandSell,
+            discount: discountAmount,
+            discountReason: discountReason,
+            finalTotal: finalTotal,
             profit: profit,
             profitPct: profitPct,
             finalProductWeight: finalProductWeight
-        }
-        Calculator.renderOrderSummary(summaryData, "invoiceSummaryContainer"); // MAin Invice
+        };
+
+        console.log("summaryData sent to renderOrderSummary:", summaryData);
+
+        // Render summaries AFTER all calculations
+        Calculator.renderOrderSummary(summaryData, "invoiceSummaryContainer");
         Calculator.renderOrderSummary(summaryData, "orderSummaryContainer");
+
+        // Update the big total number at the top
+        safeSetText("grandTotal", `$${finalTotal.toFixed(2)}`);
+
         // ──────── UPDATE DOM ONLY WHEN NEEDED ────────
         updateIfChanged("craftingTree", treeHTML);
         updateIfChanged("rawSummary", rawTableHTML);
         updateIfChanged("invoiceItems", invoiceHTML);
     },
 
+
     renderOrderSummary(data, targetId) {
-        const { grandCost = 0, grandSell = 0, profit = 0, profitPct = 0, finalProductWeight = 0 } = data;
+        const { grandCost = 0, grandSell = 0, discount = 0, discountReason = "", finalTotal = 0, profit = 0, profitPct = 0, finalProductWeight = 0 } = data;
         const profitClass = profit >= 0 ? "profit-positive" : "profit-negative";
         const profitSign = profit >= 0 ? "+" : "";
 
@@ -257,9 +277,14 @@ const Calculator = {
                 <!-- Right side: TOTAL DUE + Weight (always visible) -->
                 <div style="text-align:right; min-width:220px;">
                     <div style="font-size:28px; color:#0ff;">
-                        TOTAL DUE: 
-                        <span id="grandTotal" class="grand-total">$${grandSell.toFixed(2)}</span>
+                        TOTAL DUE:
+                        <span id="grandTotal" class="grand-total">$${finalTotal.toFixed(2)}</span>
                     </div>
+
+                    ${discount > 0 ? `
+                    <div style="font-size:18px; color:#ff6b6b; margin-top:8px;">
+                        Discount (${discountReason}): -$${discount.toFixed(2)}
+                    </div>` : ''}
                     <div style="color:#0af; font-size:16px; margin-top:4px;">
                         Total Weight: 
                         <span id="invoiceTotalWeight">${finalProductWeight.toFixed(1)}</span>kg
@@ -361,3 +386,17 @@ function updateMaterialsTableNow() {
     // Force second pass to ensure warehouse usage is reflected
     requestAnimationFrame(() => Calculator.run());
 }
+
+// Save discount when changed
+document.getElementById("discountAmount")?.addEventListener("input", async (e) => {
+    const amount = parseFloat(e.target.value) || 0;
+    App.state.orderDiscount.amount = amount;
+    await App.save("orderDiscount");
+    debouncedCalcRun();
+});
+
+document.getElementById("discountReason")?.addEventListener("input", async (e) => {
+    App.state.orderDiscount.reason = e.target.value.trim();
+    await App.save("orderDiscount");
+    debouncedCalcRun();
+});

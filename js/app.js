@@ -676,7 +676,8 @@ const App = {
         minStock: {},
         rawPrice: { "Wood": 0.20, "Logs": 0.50, "Resin": 0.20, "Fiber": 0.20, "Cotton": 0.40, "Wheat": 0.30, "Raw Pelt": 1.00, "Tanned Leather": 1.50, "Leather Strap": 0.50, "Rock": 0.20, "Iron": 1.00, "Steel": 2.50, "Nails": 0.15, "Tent Stake": 3.00, "Labour": 0.10, "Copper": 1.50, "Wire": 3.00, "Copper Wire": 3.00, "Coal": 0.80 },
         recipes: { "Logs": { i: { "Wood": 2, "Labour": 1 }, y: 1 }, "Plank": { i: { "Logs": 1, "Labour": 1 }, y: 4 },/* ... all your recipes ... */ },
-        order: [], currentEmployee: "", currentCustomer: "", craftingPreferences: {}
+        order: [], currentEmployee: "", currentCustomer: "", craftingPreferences: {},
+        orderDiscount: { amount: 0, reason: "" }, // ← NEW DISCOUNT FIELD
     },
     cache: { cost: {} },
     lastSavedState: {},
