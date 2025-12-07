@@ -199,10 +199,23 @@ const RawMaterials = {
 
     // REMOVE RAW MATERIAL
     async remove(name) {
-        const ok = await showConfirm(`Permanently delete "${name}" from raw materials?\nThis removes price & weight data.`); if (!ok) return;
+        const ok = await showConfirm(`Permanently delete "${name}" from raw materials?\nThis removes price & weight data.`);
+        if (!ok) return;
 
-        delete App.state.rawPrice[name];
-        App.save("rawPrice");
+        // 2. FORCE DELETE IN FIRESTORE
+        try {
+            await firebase.firestore().collection('business').doc('main').update({
+                [`rawPrice.${name}`]: firebase.firestore.FieldValue.delete()
+            });
+            console.log(`Deleted rawPrice.${name} from Firebase`);
+        } catch (err) {
+            console.error("Failed to delete from Firebase:", err);
+            showToast("fail", "Failed to delete from server — check console");
+            return;
+        }
+
+
+        await App.save("rawPrice");
         this.renderPrices();
         debouncedCalcRun();
         PriceList.render();

@@ -30,16 +30,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // EVERYTHING under /business is allowed for any logged-in user (including anonymous)
-match /business/{businessId}/{path=} {
+match /business/{businessId}/{path=**} {
   allow read, write: if request.auth != null;
 }
 
 // Deny everything else in the database
-    match /{document=} {
+    match /{document=**} {
       allow read, write: if false;
     }
   }
 }
+
+On  the firebase console
+go to Authentication
+select the sign in method tab
+from the firt colulmn choose anonymous and enable it.
+
+
 
 4. make a copy of this file
     rename it to firebaseConfig.js
