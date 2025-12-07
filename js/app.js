@@ -700,10 +700,21 @@ const App = {
         let value = this.state[key];
 
         // CRITICAL: Force a fresh object for warehouseStock and shopStock
-        // This breaks the reference so Firestore sees the change
         if (key === "warehouseStock" || key === "shopStock") {
             value = JSON.parse(JSON.stringify(value)); // ← THIS IS THE NUCLEAR FIX
             console.log(`FORCE CLONED ${key} for save`);
+        }
+
+        // NEW: Sanitize object keys (especially for recipes, rawPrice, etc.) — SKIP FOR STOCK KEYS
+        if (typeof value === "object" && value !== null && !Array.isArray(value) &&
+            key !== "shopStock" && key !== "warehouseStock") {
+            const sanitized = {};
+            for (const k in value) {
+                const safeKey = k.replace(/[/.#$[\]]/g, '_');
+                sanitized[safeKey] = value[k];
+            }
+            value = sanitized;
+            console.log(`Sanitized keys for ${key}`);
         }
 
         // Your existing deepClean (perfect — keep it)
