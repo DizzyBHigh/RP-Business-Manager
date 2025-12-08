@@ -12,16 +12,26 @@ const RawMaterials = {
         const supplier = document.getElementById("purchaseSupplier").value.trim() || "Unknown";
         const employee = document.getElementById("purchaseEmployee").value || App.state.currentEmployee || "Manager";
 
-        if (!name) return showToast("fail", "Please select or enter a raw material.");
+        if (!name) return showToast("fail", "Please select or enter an item.");
         if (qty <= 0) return showToast("fail", "Quantity must be at least 1.");
 
+        // CHECK IF IT'S A CRAFTED ITEM OR RAW
+        const isCrafted = !!App.state.recipes[name];
         const rawData = App.state.rawPrice[name];
-        if (!rawData || typeof rawData !== 'object') {
-            return showToast("fail", `"${name}" is not in Raw Prices!\nAdd it first in the Raw Prices tab.`);
+
+        let basePrice = 0;
+        let weightPerUnit = 0;
+
+        if (isCrafted) {
+            basePrice = Calculator.cost(name) || 0;
+            weightPerUnit = Calculator.weight(name) || 0;
+        } else if (rawData) {
+            basePrice = rawData.price ?? 0;
+            weightPerUnit = rawData.weight ?? 0;
+        } else {
+            return showToast("fail", `"${name}" not found in raw materials or recipes!`);
         }
 
-        const basePrice = rawData.price ?? 0;
-        const weightPerUnit = rawData.weight ?? 0;
         const unitPrice = totalPaid !== null ? (totalPaid / qty) : basePrice;
         const totalCost = totalPaid !== null ? totalPaid : (basePrice * qty);
         const totalWeight = qty * weightPerUnit;
@@ -37,8 +47,10 @@ const RawMaterials = {
         preview += `Supplier: ${supplier}\n`;
         preview += `Employee: ${employee}`;
 
-        const ok = await showConfirm(preview); if (!ok) return;
+        const ok = await showConfirm(preview);
+        if (!ok) return;
 
+        // UPDATE WAREHOUSE STOCK — WORKS FOR BOTH RAW AND CRAFTED
         App.state.warehouseStock[name] = (App.state.warehouseStock[name] || 0) + qty;
 
         const now = new Date();
@@ -59,30 +71,31 @@ const RawMaterials = {
         };
 
         App.state.ledger.push(record);
-        App.save("ledger");
-        App.save("warehouseStock");
+        await App.save("ledger");
+        await App.save("warehouseStock");
 
         const successMsg = document.getElementById("purchaseSuccess");
         successMsg.innerHTML = `
-      <div style="text-align:center;padding:20px;background:#001a00;border:2px solid #0f0;border-radius:8px;">
-        <h3 style="color:#0f8;margin:0;">PURCHASE COMPLETE</h3>
-        <div style="margin:10px 0;font-size:18px;">
-          <strong>${qty} × ${name}</strong>
-        </div>
-        <div style="color:#0af;">
-          Total Weight: <strong>${totalWeight.toFixed(2)} kg</strong>
-        </div>
-        <div style="color:#ff0;">
-          Total Cost: <strong>$${totalCost.toFixed(2)}</strong>
-        </div>
-        <div style="margin-top:8px;color:#888;">
-          Added to warehouse • Ledger updated
-        </div>
-      </div>
-    `;
+          <div style="text-align:center;padding:20px;background:#001a00;border:2px solid #0f0;border-radius:8px;">
+            <h3 style="color:#0f8;margin:0;">PURCHASE COMPLETE</h3>
+            <div style="margin:10px 0;font-size:18px;">
+              <strong>${qty} × ${name}</strong>
+            </div>
+            <div style="color:#0af;">
+              Total Weight: <strong>${totalWeight.toFixed(2)} kg</strong>
+            </div>
+            <div style="color:#ff0;">
+              Total Cost: <strong>$${totalCost.toFixed(2)}</strong>
+            </div>
+            <div style="margin-top:8px;color:#888;">
+              Added to warehouse • Ledger updated
+            </div>
+          </div>
+        `;
         successMsg.style.display = "block";
         setTimeout(() => successMsg.style.display = "none", 5000);
 
+        // Clear form
         document.getElementById("purchaseItemSearch").value = "";
         document.getElementById("purchaseQty").value = "1";
         document.getElementById("purchasePrice").value = "";
