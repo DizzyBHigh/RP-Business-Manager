@@ -345,10 +345,11 @@ const LedgerManual = {
 
     // Fill employee dropdowns once (call on init and when employees change)
     populateEmployeeSelects() {
-        const employees = Object.keys(App.state.employees).sort();
+        const employees = Object.keys(App.state.employees || {}).sort();
         const addSel = document.getElementById("addEmployee");
         const removeSel = document.getElementById("removeEmployee");
         [addSel, removeSel].forEach(sel => {
+            if (!sel) return;
             const current = sel.value;
             sel.innerHTML = '<option value="">Select Employee (optional)</option>';
             employees.forEach(name => {
@@ -360,72 +361,54 @@ const LedgerManual = {
         });
     },
 
-    add(entry) {
-        // Generate a deterministic ID based on content + timestamp
-        const contentKey = [
-            entry.type,
-            entry.date,
-            entry.employee,
-            entry.customer,
-            entry.description || entry.itemSummary || "",
-            entry.amount || entry.totalSale || entry.totalCost || 0,
-            entry.totalWeight || 0
-        ].join("|");
-
-        const hash = btoa(encodeURIComponent(contentKey)).slice(0, 20); // short stable ID
-        const proposedId = `${entry.date}_${hash}`;
-
-        // CHECK FOR EXACT DUPLICATE (same content + same date)
-        const isDuplicate = App.state.ledger.some(e =>
-            e.id === proposedId ||
-            (e.date === entry.date &&
-                e.type === entry.type &&
-                e.employee === entry.employee &&
-                Math.abs((e.amount || e.totalSale || e.totalCost || 0) - (entry.amount || entry.totalSale || entry.totalCost || 0)) < 0.01)
-        );
-
-        if (isDuplicate) {
-            console.log("Duplicate ledger entry blocked:", entry);
-            showToast("info", "Duplicate transaction blocked");
-            return false;
-        }
-
-        // SAFE TO ADD
-        entry.id = proposedId;
-        entry.timestamp = new Date().toISOString();
-
-        App.state.ledger.push(entry);
-        App.save("ledger");
-
-        // Auto-re-render
-        Ledger.render();
-        return true;
-    },
-
-    remove() {
-        const amount = parseFloat(document.getElementById("removeAmount").value) || 0;
+    // ADD MONEY
+    add() {
+        const amount = parseFloat(document.getElementById("addAmount").value) || 0;
         if (amount <= 0) return showToast("fail", "Enter a positive amount");
-        const employee = document.getElementById("removeEmployee").value.trim() || "Cash expense";
-        const desc = document.getElementById("removeDesc").value.trim() || "Cash expense";
-        this.record(-amount, employee, desc);
-        this.clearForms("remove");
-    },
 
-    record(amount, employee, description) {
-        const now = new Date();
+        const employee = document.getElementById("addEmployee").value.trim() || "Owner/Cash";
+        const desc = document.getElementById("addDesc").value.trim() || "Money added";
+
         const record = {
-            id: this.generateId("MANUAL"),
-            date: now.toISOString().slice(0, 10),
-            timestamp: now.toISOString(),
-            type: "manual_adjustment",
+            id: this.generateId("DEPOSIT"),
+            date: new Date().toISOString().slice(0, 10),
+            timestamp: new Date().toISOString(),
+            type: "money_added",
             employee: employee,
-            description: description,
-            amount: amount,
+            description: desc,
+            amount: amount
         };
+
         App.state.ledger.push(record);
         App.save("ledger");
         Ledger.render();
-        showToast("success", `$${Math.abs(amount).toFixed(2)} ${amount > 0 ? "added to" : "removed from"} ledger`);
+        showToast("success", `$${amount.toFixed(2)} added to ledger`);
+        this.clearForms("add");
+    },
+
+    // REMOVE MONEY
+    remove() {
+        const amount = parseFloat(document.getElementById("removeAmount").value) || 0;
+        if (amount <= 0) return showToast("fail", "Enter a positive amount");
+
+        const employee = document.getElementById("removeEmployee").value.trim() || "Owner/Cash";
+        const desc = document.getElementById("removeDesc").value.trim() || "Money removed";
+
+        const record = {
+            id: this.generateId("WITHDRAW"),
+            date: new Date().toISOString().slice(0, 10),
+            timestamp: new Date().toISOString(),
+            type: "money_removed",
+            employee: employee,
+            description: desc,
+            amount: -amount
+        };
+
+        App.state.ledger.push(record);
+        App.save("ledger");
+        Ledger.render();
+        showToast("success", `$${amount.toFixed(2)} removed from ledger`);
+        this.clearForms("remove");
     },
 
     clearForms(which = "both") {
