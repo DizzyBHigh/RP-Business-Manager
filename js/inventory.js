@@ -285,17 +285,40 @@ const Inventory = {
     setShopStock(item, value) {
         const qty = parseInt(value) || 0;
         if (qty < 0) qty = 0;
+
         const previous = App.state.shopStock[item] || 0;
         App.state.shopStock[item] = qty;
+
+        // Save to Firebase
         App.save("shopStock");
+
+        // Visual feedback only — NO RENDER CALL!
         if (qty !== previous) {
-            const el = document.getElementById("setshop_" + item.replace(/ /g, '_'));
+            const el = event?.target || document.getElementById("setshop_" + item.replace(/ /g, '_'));
             if (el) {
                 el.style.background = "#2a2";
                 setTimeout(() => el.style.background = "", 300);
             }
         }
-        this.render();
+
+        // DON'T CALL this.render() — it overwrites your change!
+        // Instead, just update the visual weight display
+        const input = document.getElementById("setshop_" + item.replace(/ /g, '_'));
+        if (input) {
+            const cell = input.closest('td');
+            if (cell) {
+                const weight = Calculator.weight(item);
+                const small = cell.querySelector('small');
+                if (small) small.remove();
+                if (weight > 0) {
+                    const newSmall = document.createElement('small');
+                    newSmall.style.color = "#0af";
+                    newSmall.textContent = (qty * weight).toFixed(2) + "kg";
+                    cell.appendChild(document.createElement('br'));
+                    cell.appendChild(newSmall);
+                }
+            }
+        }
     },
     _filterLowOnly: false,
 
@@ -308,17 +331,39 @@ const Inventory = {
     setWarehouseStock(item, value) {
         const qty = parseInt(value) || 0;
         if (qty < 0) qty = 0;
+
         const previous = App.state.warehouseStock[item] || 0;
         App.state.warehouseStock[item] = qty;
+
+        // Save to Firebase
         App.save("warehouseStock");
+
+        // Visual feedback only — NO RENDER CALL!
         if (qty !== previous) {
-            const el = document.getElementById("setwarehouse_" + item.replace(/ /g, '_'));
+            const el = event?.target || document.getElementById("setwarehouse_" + item.replace(/ /g, '_'));
             if (el) {
                 el.style.background = "#2a2";
                 setTimeout(() => el.style.background = "", 300);
             }
         }
-        this.render();
+
+        // Update weight display instantly without full re-render
+        const input = document.getElementById("setwarehouse_" + item.replace(/ /g, '_'));
+        if (input) {
+            const cell = input.closest('td');
+            if (cell) {
+                const weight = Calculator.weight(item);
+                const small = cell.querySelector('small');
+                if (small) small.remove();
+                if (weight > 0) {
+                    const newSmall = document.createElement('small');
+                    newSmall.style.color = "#0af";
+                    newSmall.textContent = (qty * weight).toFixed(2) + "kg";
+                    cell.appendChild(document.createElement('br'));
+                    cell.appendChild(newSmall);
+                }
+            }
+        }
     },
 
     addRawToShop(raw) {
@@ -353,15 +398,43 @@ const Inventory = {
 
     setMin(item, val) {
         const num = parseInt(val) || 0;
+        const previous = App.state.minStock[item] || 0;
+
         if (num === 0) {
             delete App.state.minStock[item];
-            delete App.state.shopStock[item];
+            delete App.state.shopStock[item]; // optional: clear shop stock when min=0
         } else {
             App.state.minStock[item] = num;
-            if (App.state.shopStock[item] === undefined) App.state.shopStock[item] = 0;
+            // Ensure shopStock exists (prevents undefined errors)
+            if (App.state.shopStock[item] === undefined) {
+                App.state.shopStock[item] = 0;
+            }
         }
-        App.save("minStock"); App.save("shopStock");
-        this.render();
+
+        // Save both at once — faster and more reliable
+        App.save("minStock");
+        if (num > 0 || previous > 0) {
+            App.save("shopStock"); // only if relevant
+        }
+
+        // Visual feedback
+        if (num !== previous) {
+            const el = event?.target || document.querySelector(`input[class="minstock-input"][onchange="Inventory.setMin('${item}', this.value)"]`);
+            if (el) {
+                el.style.background = "#2a2";
+                setTimeout(() => el.style.background = "", 300);
+            }
+        }
+
+        // Update status cell instantly (LOW / OK) without full re-render
+        const statusCell = document.querySelector(`td:contains('${item}')`)?.closest('tr')?.cells[5];
+        if (statusCell) {
+            const shop = App.state.shopStock[item] || 0;
+            const low = shop < num;
+            statusCell.innerHTML = low
+                ? `<span style="color:var(--red);font-weight:bold;">LOW (-${num - shop})</span>`
+                : `<span style="color:var(--green);font-weight:bold;">OK</span>`;
+        }
     },
 
     moveToShop(item) {
