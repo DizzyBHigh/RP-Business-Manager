@@ -251,7 +251,7 @@ const RawMaterials = {
     }
 };
 
-// SEARCHABLE RAW MATERIAL SELECT FOR PURCHASES
+// SEARCHABLE RAW MATERIAL SELECT FOR PURCHASES — NOW INCLUDES CRAFTED ITEMS
 document.getElementById('purchaseItemSearch')?.addEventListener('input', function (e) {
     const val = e.target.value.toLowerCase().trim();
     const opts = document.getElementById('purchaseItemOptions');
@@ -259,24 +259,40 @@ document.getElementById('purchaseItemSearch')?.addEventListener('input', functio
     opts.style.display = val ? 'block' : 'none';
     if (!val) return;
 
-    Object.keys(App.state.rawPrice || {})
-        .filter(name => name.toLowerCase().includes(val))
-        .sort()
-        .slice(0, 20)
-        .forEach(name => {
-            const data = App.state.rawPrice[name];
-            const price = (data && data.price !== undefined) ? data.price : 0;
+    // COMBINE RAW MATERIALS + CRAFTED ITEMS
+    const allItems = [
+        ...Object.keys(App.state.rawPrice || {}),
+        ...Object.keys(App.state.recipes || {})
+    ].filter(name => name.toLowerCase().includes(val))
+        .sort();
 
-            const div = document.createElement('div');
-            div.className = 'category-item';
-            div.textContent = `${name} ($${Number(price).toFixed(2)} ea)`;
-            div.onclick = () => {
-                document.getElementById('purchaseItemSearch').value = name;
-                opts.style.display = 'none';
-                document.getElementById('purchaseQty')?.focus();
-            };
-            opts.appendChild(div);
-        });
+    allItems.slice(0, 20).forEach(name => {
+        const isCrafted = App.state.recipes[name];
+        const price = isCrafted
+            ? Calculator.cost(name) || 0
+            : (App.state.rawPrice[name]?.price || 0);
+
+        const div = document.createElement('div');
+        div.className = 'category-item';
+        div.style.paddingLeft = "20px";
+        div.style.position = "relative";
+
+        // Add icon for crafted items
+        if (isCrafted) {
+            div.style.paddingLeft = "28px";
+            div.style.color = "#0af";
+            div.innerHTML = `✦ ${name} (Crafted) ($${price.toFixed(2)} ea)`;
+        } else {
+            div.textContent = `${name} ($${price.toFixed(2)} ea)`;
+        }
+
+        div.onclick = () => {
+            document.getElementById('purchaseItemSearch').value = name;
+            opts.style.display = 'none';
+            document.getElementById('purchaseQty')?.focus();
+        };
+        opts.appendChild(div);
+    });
 });
 
 //trigger dropdown update when raw material page opens
