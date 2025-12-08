@@ -672,62 +672,70 @@
 
     <div id="recipes" class="tab-content">
         <!-- SEARCH BAR -->
+
+
+        <!-- CREATE NEW RECIPE FORM -->
+        <div id="createRecipeSection" style="display:none;">
+            <div id="createRecipeForm"
+                style="background:#001122; border:3px solid #0af; border-radius:16px; padding:28px; max-width:680px; margin:30px auto; ">
+                <h2 style="text-align:center; color:#0ff; margin:0 0 24px 0; font-size:26px;">Create New Recipe</h2>
+
+                <div style="margin-bottom:20px;">
+                    <label style="color:#0af; font-weight:bold; font-size:16px;">Recipe Name</label>
+                    <input type="text" id="newItemName" placeholder="e.g. Fermentation Barrel"
+                        style="width:75%; margin-top:8px; padding:14px; background:#000; color:white; border:2px solid #0af; border-radius:10px; font-size:17px;">
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px;">
+                    <div>
+                        <label style="color:#0af; font-weight:bold; font-size:15px;">Yield per craft</label>
+                        <input type="number" id="newItemYield" value="1" min="1"
+                            style="width:25%; margin-top:6px; padding:14px; background:#000; color:#0ff; border:2px solid #0af; border-radius:10px; font-size:18px; text-align:center; font-weight:bold;">
+                    </div>
+                    <div>
+                        <label style="color:#0af; font-weight:bold; font-size:15px;">Weight per item (kg)</label>
+                        <input type="number" step="0.01" id="newItemWeight" value="0.00"
+                            style="width:25%; margin-top:6px; padding:14px; background:#001133; color:#0ff; border:px solid #00ffff; border-radius:10px; font-size:20px; text-align:center; font-weight:bold;">
+                        <div style="text-align:center; margin-top:6px; color:#0af; font-size:15px;"></div>
+                    </div>
+                </div>
+
+                <div
+                    style="background:#000814; padding:20px; border-radius:12px; border:1px solid #0af; margin-bottom:24px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                        <strong style="color:#0ff; font-size:17px;">Ingredients</strong>
+                        <button onclick="RecipeEditor.addRow('new')"
+                            style="padding:10px 18px; background:#0a0; color:white; border:none; border-radius:8px; font-weight:bold;">
+                            + Add Ingredient
+                        </button>
+                    </div>
+                    <div id="newIngredients" style="max-height:340px; overflow-y:auto; padding-right:6px;"></div>
+                </div>
+
+                <div style="text-align:center; margin-top:20px;">
+                    <div style="text-align:center; margin-top:30px;">
+                        <button onclick="RecipeEditor.create()"
+                            style="padding:16px 40px; background:#00aa00; color:white; font-weight:bold; font-size:19px; border:none; border-radius:12px; margin-right:15px;">
+                            CREATE RECIPE
+                        </button>
+                        <button onclick="RecipeEditor.cancelCreate()"
+                            style="padding:16px 40px; background:#666; color:white; font-weight:bold; font-size:18px; border:none; border-radius:12px;">
+                            CANCEL
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- EDIT FORM (hidden until a recipe is selected) -->
+        <div id="editArea" style="display:none;"></div>
+        <!-- RECIPE LIST TABLE - PLACE THIS AFTER YOUR EDIT AREA -->
         <div style="max-width:680px; margin:30px auto;">
             <div class="searchable-select" style="width:100%;">
-                <input type="text" id="recipeSearch" placeholder="Search recipes to edit..."
+                <input type="text" id="recipeSearch" placeholder="Start typing to filter recipes..."
                     oninput="RecipeEditor.filterRecipes(this.value)">
                 <div class="options" id="recipeOptions"></div>
             </div>
         </div>
-
-        <!-- CREATE NEW RECIPE FORM -->
-        <div id="createRecipeForm"
-            style="background:#001122; border:3px solid #0af; border-radius:16px; padding:28px; max-width:680px; margin:30px auto; ">
-            <h2 style="text-align:center; color:#0ff; margin:0 0 24px 0; font-size:26px;">Create New Recipe</h2>
-
-            <div style="margin-bottom:20px;">
-                <label style="color:#0af; font-weight:bold; font-size:16px;">Recipe Name</label>
-                <input type="text" id="newItemName" placeholder="e.g. Fermentation Barrel"
-                    style="width:75%; margin-top:8px; padding:14px; background:#000; color:white; border:2px solid #0af; border-radius:10px; font-size:17px;">
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px;">
-                <div>
-                    <label style="color:#0af; font-weight:bold; font-size:15px;">Yield per craft</label>
-                    <input type="number" id="newItemYield" value="1" min="1"
-                        style="width:25%; margin-top:6px; padding:14px; background:#000; color:#0ff; border:2px solid #0af; border-radius:10px; font-size:18px; text-align:center; font-weight:bold;">
-                </div>
-                <div>
-                    <label style="color:#0af; font-weight:bold; font-size:15px;">Weight per item (kg)</label>
-                    <input type="number" step="0.01" id="newItemWeight" value="0.00"
-                        style="width:25%; margin-top:6px; padding:14px; background:#001133; color:#0ff; border:px solid #00ffff; border-radius:10px; font-size:20px; text-align:center; font-weight:bold;">
-                    <div style="text-align:center; margin-top:6px; color:#0af; font-size:15px;"></div>
-                </div>
-            </div>
-
-            <div
-                style="background:#000814; padding:20px; border-radius:12px; border:1px solid #0af; margin-bottom:24px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-                    <strong style="color:#0ff; font-size:17px;">Ingredients</strong>
-                    <button onclick="RecipeEditor.addRow('new')"
-                        style="padding:10px 18px; background:#0a0; color:white; border:none; border-radius:8px; font-weight:bold;">
-                        + Add Ingredient
-                    </button>
-                </div>
-                <div id="newIngredients" style="max-height:340px; overflow-y:auto; padding-right:6px;"></div>
-            </div>
-
-            <div style="text-align:center; margin-top:20px;">
-                <button onclick="RecipeEditor.create()"
-                    style="padding:18px 80px; background:#00aa00; color:white; font-weight:bold; font-size:20px; border:none; border-radius:14px; cursor:pointer;">
-                    CREATE RECIPE
-                </button>
-            </div>
-        </div>
-
-        <!-- EDIT FORM (hidden until a recipe is selected) -->
-        <div id="editArea" style="display:none;"></div>
-        <!-- RECIPE LIST TABLE - PLACE THIS AFTER YOUR EDIT AREA -->
         <div style="margin: 32px 0; max-width: 100%; overflow-x: auto;">
             <h2 style="color: #00ffcc; text-align: center; margin-bottom: 16px;">All Recipes</h2>
 
@@ -740,7 +748,15 @@
                             <th style="padding:12px; text-align:center;">Yield</th>
                             <th style="padding:12px; text-align:center;">Weight (kg)</th>
                             <th style="padding:12px; text-align:center;">Ingredients</th>
-                            <th style="padding:12px; width:100px;">Action</th>
+                            <th style="padding:12px; text-align:center;">Cost Price</th>
+                            <th style="padding:12px; width:100px;">
+                                <div style="text-align:center;">
+                                    <button onclick="RecipeEditor.showCreateForm()"
+                                        style=" background:rgb(189, 192, 20); color:black; font-weight:bold; font-size:16px; border:none; border-radius:12px; cursor:pointer;">
+                                        + CREATE NEW RECIPE
+                                    </button>
+                                </div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody id="recipeTableBody">
