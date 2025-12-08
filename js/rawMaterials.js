@@ -140,13 +140,12 @@ const RawMaterials = {
         const rawPrice = App.state.rawPrice || {};
         let items = Object.keys(rawPrice);
 
-        // APPLY FILTER IF PROVIDED
+        // Apply filter
         if (filter) {
             const lower = filter.toLowerCase().trim();
             items = items.filter(name => name.toLowerCase().includes(lower));
         }
 
-        // Sort alphabetically
         items.sort((a, b) => a.localeCompare(b));
 
         tbody.innerHTML = "";
@@ -163,29 +162,29 @@ const RawMaterials = {
 
         for (const m of items) {
             const data = rawPrice[m];
-            const price = (data && typeof data === 'object' && data.price !== undefined) ? data.price : 0;
-            const weight = (data && typeof data === 'object' && data.weight !== undefined) ? data.weight : 0;
+            const price = (data?.price !== undefined) ? data.price : 0;
+            const weight = (data?.weight !== undefined) ? data.weight : 0;
 
             const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td style="font-weight:bold;color:var(--accent);padding:10px;">${m}</td>
                 <td style="padding:8px;">
                   <input type="number" step="0.01" value="${price.toFixed(2)}" 
-                         style="width:110px;background:#111;color:white;border:1px solid #444;padding:8px;border-radius:4px;font-size:14px;"
-                         class="priceInput">
+                         class="priceInput auto-save-input"
+                         data-item="${m}"
+                         style="width:110px;background:#111;color:white;border:1px solid #444;padding:8px;border-radius:4px;font-size:14px;">
                   <small style="color:#888;margin-left:6px;">$/unit</small>
                 </td>
                 <td style="padding:8px;">
                   <input type="number" step="0.01" value="${weight.toFixed(2)}" 
-                         style="width:100px;background:#001122;color:#0af;border:2px solid #00aaff;padding:8px;border-radius:4px;font-weight:bold;font-size:14px;"
-                         class="weightInput">
+                         class="weightInput auto-save-input"
+                         data-item="${m}"
+                         style="width:100px;background:#001122;color:#0af;border:2px solid #00aaff;padding:8px;border-radius:4px;font-weight:bold;font-size:14px;">
                   <strong style="color:#0af;margin-left:8px;">kg/unit</strong>
                 </td>
                 <td style="text-align:center;padding:8px;">
-                  <button class="small success" onclick="RawMaterials.savePrice('${m}', this)"
-                          style="padding:8px 16px;font-size:13px;border-radius:6px;">Save</button>
                   <button class="danger small" onclick="RawMaterials.remove('${m}')"
-                          style="padding:8px 12px;margin-left:6px;font-size:13px;border-radius:6px;">Remove</button>
+                          style="padding:8px 12px;font-size:13px;border-radius:6px;">Remove</button>
                 </td>
             `;
 
@@ -202,25 +201,50 @@ const RawMaterials = {
     },
 
     // SAVE PRICE + WEIGHT — BULLETPROOF
-    savePrice(name, button) {
+    savePrice(item, button) {
         const row = button.closest("tr");
         const priceInput = row.querySelector(".priceInput");
-        const weightInput = row.querySelector(".weightInput");
-
         const price = parseFloat(priceInput.value) || 0;
-        const weight = parseFloat(weightInput.value) || 0;
 
-        App.state.rawPrice[name] = { price, weight };
+        // Update state
+        if (!App.state.rawPrice[item]) App.state.rawPrice[item] = {};
+        App.state.rawPrice[item].price = price;
+
+        // Save to Firebase
         App.save("rawPrice");
 
-        row.style.background = "#002200";
-        setTimeout(() => {
-            row.style.background = weight > 0 ? "rgba(0, 170, 255, 0.08)" : "";
-            row.style.borderLeft = weight > 0 ? "4px solid #0af" : "none";
-        }, 300);
+        // Visual feedback
+        button.style.background = "#2a2";
+        setTimeout(() => button.style.background = "", 300);
 
         debouncedCalcRun();
-        //safeRender();
+    },
+    saveWeight(item, button) {
+        const row = button.closest("tr");
+        const weightInput = row.querySelector(".weightInput");
+        const weight = parseFloat(weightInput.value) || 0;
+
+        // Update state
+        if (!App.state.rawPrice[item]) App.state.rawPrice[item] = {};
+        App.state.rawPrice[item].weight = weight;
+
+        // Save to Firebase
+        App.save("rawPrice");
+
+        // Visual feedback
+        button.style.background = "#2a2";
+        setTimeout(() => button.style.background = "", 300);
+
+        // Update weight highlight instantly
+        if (weight > 0) {
+            row.style.background = "rgba(0, 170, 255, 0.08)";
+            row.style.borderLeft = "4px solid #0af";
+        } else {
+            row.style.background = "";
+            row.style.borderLeft = "none";
+        }
+
+        debouncedCalcRun();
     },
 
     // REMOVE RAW MATERIAL
@@ -315,4 +339,47 @@ document.querySelector('[data-tab="rawpurchase"]')?.addEventListener("click", ()
 document.getElementById("newRawName")?.addEventListener("input", function (e) {
     const filter = e.target.value;
     RawMaterials.renderPrices(filter);
+});
+
+// AUTO-SAVE PRICE & WEIGHT ON BLUR
+// AUTO-SAVE PRICE & WEIGHT ON BLUR — GREEN FLASH ON INPUT ONLY
+document.getElementById("rawTable")?.addEventListener("focusout", function (e) {
+    const input = e.target;
+    if (!input.classList.contains("auto-save-input")) return;
+
+    const item = input.dataset.item;
+    if (!item) return;
+
+    let value = parseFloat(input.value) || 0;
+
+    // Update the correct field
+    if (input.classList.contains("priceInput")) {
+        if (!App.state.rawPrice[item]) App.state.rawPrice[item] = {};
+        App.state.rawPrice[item].price = value;
+    }
+    else if (input.classList.contains("weightInput")) {
+        if (!App.state.rawPrice[item]) App.state.rawPrice[item] = {};
+        App.state.rawPrice[item].weight = value;
+
+        // Only update row highlight (no flash on row)
+        const row = input.closest("tr");
+        if (value > 0) {
+            row.style.background = "rgba(0, 170, 255, 0.08)";
+            row.style.borderLeft = "4px solid #0af";
+        } else {
+            row.style.background = "";
+            row.style.borderLeft = "none";
+        }
+    }
+
+    // Save to Firebase
+    App.save("rawPrice");
+    debouncedCalcRun();
+
+    // GREEN FLASH ONLY ON THE INPUT FIELD
+    input.style.background = "#004400";
+    input.style.transition = "background 0.4s ease";
+    setTimeout(() => {
+        input.style.background = ""; // back to normal
+    }, 400);
 });
