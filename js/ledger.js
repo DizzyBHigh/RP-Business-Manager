@@ -2,136 +2,7 @@
 // Ledger — NOW WITH LIVE FILTERS!
 // ========================
 const Ledger = {
-    render() {
-        const tbody = document.getElementById("ledgerBody");
-        const balanceEl = document.getElementById("currentBalance");
-        if (!tbody) return;
 
-        // === FILTERS ===
-        const from = document.getElementById("ledgerFrom")?.value || "";
-        const to = document.getElementById("ledgerTo")?.value || "";
-        const employee = document.getElementById("ledgerEmployee")?.value || "";
-        const search = document.getElementById("ledgerSearch")?.value?.toLowerCase().trim() || "";
-
-        let entries = [...App.state.ledger];
-
-        if (from || to) {
-            entries = entries.filter(e => {
-                const d = e.date || "";
-                return (!from || d >= from) && (!to || d <= to);
-            });
-        }
-
-        if (employee) {
-            entries = entries.filter(e => (e.employee || "").toLowerCase() === employee.toLowerCase());
-        }
-
-        if (search) {
-            entries = entries.filter(e =>
-                (e.description || "").toLowerCase().includes(search) ||
-                (e.itemSummary || "").toLowerCase().includes(search) ||
-                (e.customer || "").toLowerCase().includes(search) ||
-                (e.id || "").toLowerCase().includes(search)
-            );
-        }
-
-        // SORT: NEWEST FIRST (this is the key line)
-        entries.sort((a, b) => {
-            const timeA = b.timestamp || b.date + (b.id || "");
-            const timeB = a.timestamp || a.date + (a.id || "");
-            return timeA.localeCompare(timeB);
-        });
-
-        let runningBalance = 0;
-        let totalIn = 0, totalOut = 0;
-
-        // Build all rows first (fast & correct order)
-        const rowsHTML = entries.map(e => {
-            let amount = 0;
-            let weight = e.totalWeight || 0;
-            let desc = e.description || e.type || "—";
-            let customerInfo = "";
-
-            if (e.type === "sale") {
-                amount = e.totalSale || e.amount || 0;
-                customerInfo = e.customer && e.customer !== "Walk-in" ? ` → ${e.customer}` : "";
-                desc = `Customer Sale${customerInfo}`;
-                totalOut += weight;
-            }
-            else if (e.type === "restock_shop" || e.type === "restock_warehouse") {
-                amount = 0;
-                desc = `Restock (${e.type === "restock_shop" ? "Shop" : "Warehouse"})`;
-                totalOut += weight;
-            }
-            else if (e.type === "raw_purchase" || e.type === "purchase") {
-                amount = -(e.totalPaid || e.totalCost || (e.qty * e.unitPrice) || 0);
-                desc = `Bought ${e.qty || "?"}× ${e.item || "items"}`;
-                totalIn += weight;
-            }
-            else if (e.type === "deposit" || e.type === "manual") {
-                amount = Math.abs(e.amount || 0);
-                desc = e.description || "Cash In";
-            }
-            else if (e.type === "withdrawal" || e.type === "expense") {
-                amount = -(Math.abs(e.amount || 0));
-                desc = e.description || "Cash Out";
-            }
-            else if (typeof e.amount === "number") {
-                amount = e.amount;
-                desc = e.description || e.type || "Transaction";
-            }
-
-            runningBalance += amount;
-
-            const weightText = weight > 0
-                ? `<br><small style="color:#0af;font-weight:bold;">${weight.toFixed(1)}kg</small>`
-                : "";
-
-            return `
-        <tr style="border-bottom:1px solid #333;">
-            <td style="white-space:nowrap;">${e.date || "—"}</td>
-            <td><code style="background:#333;padding:2px 6px;border-radius:4px;">${e.id}</code></td>
-            <td>${e.employee || "—"}</td>
-            <td>
-                <div><strong>${desc}</strong></div>
-                <small style="color:#888;">
-                    ${e.itemSummary || ""}
-                    ${customerInfo}
-                </small>
-                ${weightText}
-            </td>
-            <td style="text-align:right;font-weight:bold;color:${amount > 0 ? 'var(--green)' : 'var(--red)'}">
-                ${amount > 0 ? "+" : ""}$${Math.abs(amount).toFixed(2)}
-            </td>
-            <td style="text-align:right;font-weight:bold;color:${runningBalance >= 0 ? 'var(--green)' : 'var(--red)'};font-size:18px;">
-                $${runningBalance.toFixed(2)}
-            </td>
-        </tr>`;
-        });
-
-        // Inject all at once (fast + correct order)
-        tbody.innerHTML = rowsHTML.length
-            ? rowsHTML.join("")
-            : `<tr><td colspan="6" style="text-align:center;padding:80px;color:#888;">No transactions match filters</td></tr>`;
-
-        // Update balance
-        if (balanceEl) {
-            balanceEl.textContent = "$" + runningBalance.toFixed(2);
-            balanceEl.style.color = runningBalance >= 0 ? "var(--green)" : "var(--red)";
-        }
-
-        // Weight summary
-        const netWeight = (totalIn - totalOut).toFixed(1);
-        const summary = document.getElementById("ledgerWeightSummary");
-        if (summary) {
-            summary.innerHTML = `
-            <div style="text-align:center;margin-top:15px;font-size:15px;">
-                <span style="color:#0ff;">+${totalIn.toFixed(1)}kg received</span> • 
-                <span style="color:#0af;">-${totalOut.toFixed(1)}kg sold/moved</span> • 
-                <strong style="color:#0f8;">NET: ${netWeight}kg</strong>
-            </div>`;
-        }
-    },
     // Clear all filter
     clearFilters() {
         document.getElementById("ledgerFrom").value = "";
@@ -172,20 +43,16 @@ const Ledger = {
 
         let entries = [...App.state.ledger];
 
-        // Date filter
+        // Apply filters
         if (from || to) {
             entries = entries.filter(e => {
                 const d = e.date || "";
                 return (!from || d >= from) && (!to || d <= to);
             });
         }
-
-        // Employee filter
         if (employee) {
             entries = entries.filter(e => (e.employee || "").toLowerCase() === employee.toLowerCase());
         }
-
-        // Search filter
         if (search) {
             entries = entries.filter(e =>
                 (e.description || "").toLowerCase().includes(search) ||
@@ -195,15 +62,91 @@ const Ledger = {
             );
         }
 
-        // SORT: NEWEST FIRST
+        // Sort newest first
         entries.sort((a, b) => {
             const timeA = b.timestamp || b.date + (b.id || "");
             const timeB = a.timestamp || a.date + (a.id || "");
             return timeA.localeCompare(timeB);
         });
 
+        // Calculate running balance from newest to oldest
         let runningBalance = 0;
-        let totalIn = 0, totalOut = 0;
+        let totalIncome = 0;
+        let totalExpense = 0;
+
+        // First pass: calculate current balance (from all ledger, not just filtered)
+        App.state.ledger.forEach(e => {
+            let amount = 0;
+            switch (e.type) {
+                case "sale":
+                    amount = e.totalSale || 0;
+                    totalIncome += amount;
+                    break;
+                case "restock_shop":
+                case "restock_warehouse":
+                    amount = 0;
+                    break;
+                case "raw_purchase":
+                case "purchase":
+                    amount = -(e.totalCost || Math.abs(e.amount) || 0);
+                    totalExpense += Math.abs(amount);
+                    break;
+                case "commission_payment":
+                    amount = -(Math.abs(e.amount) || 0);
+                    totalExpense += Math.abs(amount);
+                    break;
+                case "money_added":
+                    amount = Math.abs(e.amount) || 0;
+                    totalIncome += amount;
+                    break;
+                case "money_removed":
+                    amount = -(Math.abs(e.amount) || 0);
+                    totalExpense += Math.abs(amount);
+                    break;
+                default:
+                    amount = Number(e.amount) || 0;
+                    if (amount > 0) totalIncome += amount;
+                    else totalExpense += Math.abs(amount);
+                    break;
+            }
+            runningBalance += amount;
+        });
+
+        // Second pass: calculate balance at each point in time (from newest to oldest)
+        const balanceAtTime = {};
+        let tempBalance = runningBalance;
+
+        entries.forEach(e => {
+            let amount = 0;
+            switch (e.type) {
+                case "sale":
+                    amount = e.totalSale || 0;
+                    break;
+                case "restock_shop":
+                case "restock_warehouse":
+                    amount = 0;
+                    break;
+                case "raw_purchase":
+                case "purchase":
+                    amount = -(e.totalCost || Math.abs(e.amount) || 0);
+                    break;
+                case "commission_payment":
+                    amount = -(Math.abs(e.amount) || 0);
+                    break;
+                case "money_added":
+                    amount = Math.abs(e.amount) || 0;
+                    break;
+                case "money_removed":
+                    amount = -(Math.abs(e.amount) || 0);
+                    break;
+                default:
+                    amount = Number(e.amount) || 0;
+                    break;
+            }
+
+            balanceAtTime[e.id] = tempBalance;
+            tempBalance -= amount; // go backwards in time
+        });
 
         // Check if current user is manager
         const isMgr = (() => {
@@ -214,93 +157,82 @@ const Ledger = {
 
         tbody.innerHTML = entries.length ? "" : `<tr><td colspan="${isMgr ? "7" : "6"}" style="text-align:center;padding:80px;color:#888;">No transactions match filters</td></tr>`;
 
-        entries.forEach((e, index) => {
+        entries.forEach(e => {
             let amount = 0;
-            let weight = e.totalWeight || 0;
             let desc = e.description || e.type || "—";
             let customerInfo = "";
 
             if (e.type === "sale") {
-                amount = e.totalSale || e.amount || 0;
+                amount = e.totalSale || 0;
                 customerInfo = e.customer && e.customer !== "Walk-in" ? ` → ${e.customer}` : "";
                 desc = `Customer Sale${customerInfo}`;
-                totalOut += weight;
-            }
-            else if (e.type === "restock_shop" || e.type === "restock_warehouse") {
+            } else if (e.type === "restock_shop" || e.type === "restock_warehouse") {
                 amount = 0;
                 desc = `Restock (${e.type === "restock_shop" ? "Shop" : "Warehouse"})`;
-                totalOut += weight;
-            }
-            else if (e.type === "raw_purchase" || e.type === "purchase") {
-                amount = -(e.totalPaid || e.totalCost || (e.qty * e.unitPrice) || 0);
+            } else if (e.type === "raw_purchase" || e.type === "purchase") {
+                amount = -(e.totalCost || Math.abs(e.amount) || 0);
                 desc = `Bought ${e.qty || "?"}× ${e.item || "items"}`;
-                totalIn += weight;
-            }
-            else if (e.type === "deposit" || e.type === "manual") {
-                amount = Math.abs(e.amount || 0);
+            } else if (e.type === "commission_payment") {
+                amount = -(Math.abs(e.amount) || 0);
+                desc = e.description || "Commission Payment";
+            } else if (e.type === "money_added") {
+                amount = Math.abs(e.amount) || 0;
                 desc = e.description || "Cash In";
-            }
-            else if (e.type === "withdrawal" || e.type === "expense") {
-                amount = -(Math.abs(e.amount || 0));
+            } else if (e.type === "money_removed") {
+                amount = -(Math.abs(e.amount) || 0);
                 desc = e.description || "Cash Out";
-            }
-            else if (typeof e.amount === "number") {
-                amount = e.amount;
+            } else {
+                amount = Number(e.amount) || 0;
                 desc = e.description || e.type || "Transaction";
             }
 
-            runningBalance += amount;
-
-            const weightText = weight > 0
-                ? `<br><small style="color:#0af;font-weight:bold;">${weight.toFixed(1)}kg</small>`
-                : "";
+            const weight = e.totalWeight || 0;
+            const weightText = weight > 0 ? `<br><small style="color:#0af;font-weight:bold;">${weight.toFixed(1)}kg</small>` : "";
 
             const deleteBtn = isMgr ? `
-            <button class="danger small" style="padding:4px 8px;margin-left:8px;"
-                    onclick="Ledger.deleteTransaction('${e.id}', ${index})"
-                    title="Delete transaction (Manager only)">
-                ×
-            </button>` : "";
+                <button class="danger small" style="padding:4px 8px;margin-left:8px;"
+                        onclick="Ledger.deleteTransaction('${e.id}')"
+                        title="Delete transaction (Manager only)">
+                    ×
+                </button>` : "";
 
             const row = document.createElement("tr");
             row.innerHTML = `
-            <td style="white-space:nowrap;">${e.date || "—"}</td>
-            <td><code style="background:#333;padding:2px 6px;border-radius:4px;">${e.id}</code></td>
-            <td>${e.employee || "—"}</td>
-            <td>
-                <div><strong>${desc}</strong>${deleteBtn}</div>
-                <small style="color:#888;">
-                    ${e.itemSummary || ""}
-                    ${customerInfo}
-                </small>
-                ${weightText}
-            </td>
-            <td style="text-align:right;font-weight:bold;color:${amount > 0 ? 'var(--green)' : 'var(--red)'}">
-                ${amount > 0 ? "+" : ""}$${Math.abs(amount).toFixed(2)}
-            </td>
-            <td style="text-align:right;font-weight:bold;color:${runningBalance >= 0 ? 'var(--green)' : 'var(--red)'};font-size:18px;">
-                $${runningBalance.toFixed(2)}
-            </td>
-        `;
+                <td style="white-space:nowrap;">${e.date || "—"}</td>
+                <td><code style="background:#333;padding:2px 6px;border-radius:4px;">${e.id}</code></td>
+                <td>${e.employee || "—"}</td>
+                <td>
+                    <div><strong>${desc}</strong>${deleteBtn}</div>
+                    <small style="color:#888;">
+                        ${e.itemSummary || ""}
+                        ${customerInfo}
+                    </small>
+                    ${weightText}
+                </td>
+                <td style="text-align:right;font-weight:bold;color:${amount > 0 ? 'var(--green)' : 'var(--red)'}">
+                    ${amount > 0 ? "+" : ""}$${Math.abs(amount).toFixed(2)}
+                </td>
+                <td style="text-align:right;font-weight:bold;color:${balanceAtTime[e.id] >= 0 ? 'var(--green)' : 'var(--red)'};font-size:18px;">
+                    $${balanceAtTime[e.id].toFixed(2)}
+                </td>
+            `;
             tbody.appendChild(row);
         });
 
-        // Update balance
+        // Update current balance
         if (balanceEl) {
             balanceEl.textContent = "$" + runningBalance.toFixed(2);
             balanceEl.style.color = runningBalance >= 0 ? "var(--green)" : "var(--red)";
         }
 
         // Weight summary
-        const netWeight = (totalIn - totalOut).toFixed(1);
         const summary = document.getElementById("ledgerWeightSummary");
         if (summary) {
+            const netWeight = (entries.reduce((sum, e) => sum + (e.totalWeight || 0), 0)).toFixed(1);
             summary.innerHTML = `
-            <div style="text-align:center;margin-top:15px;font-size:15px;">
-                <span style="color:#0ff;">+${totalIn.toFixed(1)}kg received</span> • 
-                <span style="color:#0af;">-${totalOut.toFixed(1)}kg sold/moved</span> • 
-                <strong style="color:#0f8;">NET: ${netWeight}kg</strong>
-            </div>`;
+                <div style="text-align:center;margin-top:15px;font-size:15px;">
+                    <strong style="color:#0ff;">NET WEIGHT FLOW: ${netWeight}kg</strong>
+                </div>`;
         }
     },
 
