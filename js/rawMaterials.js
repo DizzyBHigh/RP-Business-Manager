@@ -95,7 +95,7 @@ const RawMaterials = {
 
     // ADD NEW RAW MATERIAL — BULLETPROOF
     add() {
-        const name = document.getElementById("newRawName").value.trim();
+        const name = sanitizeItemName(document.getElementById("newRawName").value.trim());
         const priceRaw = document.getElementById("newRawPrice").value.trim();
         const weightRaw = document.getElementById("newRawWeight").value.trim();
 

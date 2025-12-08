@@ -61,7 +61,7 @@ const RecipeEditor = {
             });
     },
     create() {
-        const name = document.getElementById("newItemName").value.trim();
+        const name = sanitizeItemName(document.getElementById("newItemName").value.trim());
         if (!name || App.state.recipes[name]) return showToast("fail,", "Invalid or duplicate name!");
 
         const ingredients = {};
@@ -243,7 +243,7 @@ const RecipeEditor = {
     },
     save() {
         const originalName = document.getElementById("recipeSearch").value.trim();
-        const newName = document.getElementById("editItemName").value.trim();
+        const newName = sanitizeItemName(document.getElementById("editItemName").value.trim());
         if (!newName) return showToast("fail", "Name required!");
 
         // Build recipe

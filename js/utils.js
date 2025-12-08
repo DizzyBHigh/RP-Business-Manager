@@ -57,6 +57,10 @@ async function loadSafe(key, fallback = null) {
     }
 
 }
+// clear illegal characters before saving
+function sanitizeItemName(name) {
+    return name.trim().replace(/[.#$[\]]/g, '_'); // only bad chars, keep spaces
+}
 
 // check id exists before setting text
 function safeSetText(id, text) {
@@ -303,6 +307,27 @@ window.claimManager = async () => {
         setTimeout(() => location.reload(), 1500);
     }
 };
+
+function debugCost(item) {
+    console.log("=== COST DEBUG FOR:", item, "===");
+    const cost = Calculator.cost(item);
+    console.log("Final cost:", cost.toFixed(2));
+
+    const recipe = App.state.recipes[item];
+    if (!recipe || !recipe.i) {
+        console.log("No recipe or ingredients");
+        return;
+    }
+
+    console.log("Recipe ingredients:", recipe.i);
+    Object.entries(recipe.i).forEach(([ing, qty]) => {
+        const ingCost = Calculator.cost(ing) || 0;
+        console.log(`${ing}: ${qty} × $${ingCost.toFixed(2)} = $${(qty * ingCost).toFixed(2)}`);
+        if (ingCost === 0) {
+            console.log("^-- THIS INGREDIENT HAS NO PRICE!");
+        }
+    });
+}
 
 /* function updatePageTitleAndHeader() {
     if (App.state.businessConfig?.name) {

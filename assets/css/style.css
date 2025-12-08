@@ -1393,6 +1393,39 @@ button:disabled {
     cursor: not-allowed !important;
 }
 
+/* MODE BUTTONS — ACTIVE = BLUE, INACTIVE = WHITE */
+.mode-btn {
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: bold;
+    border: 2px solid rgb(255, 255, 255);
+    border-radius: 12px;
+    background: transparent;
+    color: #0af;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.mode-btn.active {
+    background: #0af;
+    color: rgb(255, 255, 255);
+    box-shadow: 0 0 20px rgba(0, 175, 255, 0.6);
+}
+
+.mode-btn:hover:not(.active) {
+    background: rgba(0, 175, 255, 0.2);
+}
+
+#savePendingOrderBtn {
+    background: rgb(0, 204, 255);
+    color: rgb(0, 0, 0);
+    padding: 16px 40px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 18px;
+}
+
 /* Notifications */
 .success-notification {
     position: fixed !important;

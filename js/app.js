@@ -705,16 +705,33 @@ const App = {
             console.log(`FORCE CLONED ${key} for save`);
         }
 
-        // NEW: Sanitize object keys (especially for recipes, rawPrice, etc.) — SKIP FOR STOCK KEYS
-        if (typeof value === "object" && value !== null && !Array.isArray(value) &&
-            key !== "shopStock" && key !== "warehouseStock") {
-            const sanitized = {};
-            for (const k in value) {
-                const safeKey = k.replace(/[/.#$[\]]/g, '_');
-                sanitized[safeKey] = value[k];
+        // ONLY SANITIZE ON INITIAL CREATION — NEVER ON REGULAR SAVES
+        // We detect "creation" by checking if this is a new key being added
+        if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+            // Only sanitize specific keys that are user-entered (recipes, raw materials, custom prices)
+            const keysThatNeedSanitize = ["recipes", "rawPrice", "customPrices", "minStock", "shopStock", "warehouseStock"];
+
+            if (keysThatNeedSanitize.includes(key)) {
+                const sanitized = {};
+                let wasSanitized = false;
+
+                for (const k in value) {
+                    // Only replace forbidden Firestore characters: . # $ [ ]
+                    // DO NOT replace spaces! Only replace the bad ones with _
+                    const safeKey = k.replace(/[.#$[\]]/g, '_');
+                    sanitized[safeKey] = value[k];
+
+                    if (safeKey !== k) {
+                        wasSanitized = true;
+                        console.log(`Sanitized key: "${k}" → "${safeKey}"`);
+                    }
+                }
+
+                if (wasSanitized) {
+                    value = sanitized;
+                    console.log(`Sanitized keys for ${key} (only forbidden chars, spaces preserved)`);
+                }
             }
-            value = sanitized;
-            console.log(`Sanitized keys for ${key}`);
         }
 
         // Your existing deepClean (perfect — keep it)

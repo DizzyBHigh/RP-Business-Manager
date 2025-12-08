@@ -172,7 +172,7 @@
             style="background:var(--bg2); padding:20px; border-radius:10px; margin-bottom:20px; text-align:center; border:1px solid var(--border);">
             <h2 style="margin:0 0 15px 0; color:var(--accent);">Order Type</h2>
             <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-                <button id="btn-customer" class="mode-btn primary active" onclick="Order.setMode('customer')">
+                <button id="btn-customer" class="mode-btn active" onclick="Order.setMode('customer')">
                     Customer Sale
                 </button>
                 <button id="btn-shop" class="mode-btn" onclick="Order.setMode('shop')">
@@ -208,15 +208,10 @@
             <input type="number" id="newQty" value="1" min="1" style="width:80px; padding:8px;">
             <button class="primary" onclick="Order.add()">Add Item</button>
             <button class="danger" onclick="Order.clear()">Clear Order</button>
+            <button class="success" onclick="Inventory.addAllLowStock()">
+                AUTO-FILL: Restock Low Shop Items
+            </button>
 
-            <div style="margin-top:12px;">
-                <button class="success" onclick="Order.addLowStockToOrder()">
-                    AUTO-FILL: Restock Low Shop Items
-                </button>
-                <!-- <button class="success" onclick="Order.addLowWarehouseToOrder()">
-        AUTO-FILL: Restock Low Warehouse Items
-      </button> -->
-            </div>
         </div>
 
         <!-- Pending Order Info -->
@@ -268,8 +263,7 @@
                 onclick="Order.complete()">
                 Complete <span id="completeText">Customer Sale</span>
             </button>
-            <button onclick="activateTab('order'); setTimeout(Order.savePending, 300)"
-                style="background:#0cf; color:#000; padding:12px 24px; border:none; border-radius:8px; font-weight:bold; font-size:16px;">
+            <button id="savePendingOrderBtn" onclick="activateTab('order'); setTimeout(Order.savePending, 300)">
                 Save Current Order as Pending
             </button>
         </div>
@@ -544,11 +538,11 @@
                 <tr>
                     <th>Item</th>
                     <th>Type</th>
-                    <th>Shop Display</th>
-                    <th>Warehouse</th>
+                    <th>Warehouse Stock</th>
+                    <th>Pricing</th>
+                    <th>In Shop</th>
                     <th>Min Stock</th>
                     <th>Status</th>
-                    <th>Set Shop Stock</th>
                     <th>Actions</th>
                 </tr>
             </thead>

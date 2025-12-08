@@ -4,19 +4,21 @@
 const Inventory = {
     render() {
         const search = (document.getElementById("inventorySearch")?.value || "").toLowerCase().trim();
-        const onlyLow = this._filterLowOnly || false;  // ← Our filter state
+        const onlyLow = this._filterLowOnly || false;
         const tbody = document.getElementById("inventoryTable");
         if (!tbody) return;
-        tbody.innerHTML = "";
 
         const minStock = App.state.minStock || {};
         const shopStock = App.state.shopStock || {};
         const warehouseStock = App.state.warehouseStock || {};
         const rawPrice = App.state.rawPrice || {};
         const recipes = App.state.recipes || {};
+        const customPrices = App.state.customPrices || {};
 
         let lowCount = 0;
         let totalWeightShop = 0, totalWeightWarehouse = 0;
+
+        const fragment = document.createDocumentFragment();
 
         // === 1. CRAFTED ITEMS ===
         Object.keys(recipes).sort().forEach(item => {
@@ -28,7 +30,6 @@ const Inventory = {
             const low = shop < min;
             if (low) lowCount++;
 
-            // FILTER: Hide non-low items when onlyLow is active
             if (onlyLow && !low) return;
 
             const weightPerUnit = Calculator.weight(item);
@@ -37,14 +38,28 @@ const Inventory = {
             totalWeightShop += shop * weightPerUnit;
             totalWeightWarehouse += warehouse * weightPerUnit;
 
-            tbody.innerHTML += `
-                <tr style="${low ? 'background:rgba(255,100,100,0.12);' : ''}">
+            const needed = Math.max(0, min - shop);
+
+            // SAFE COST & SHOP PRICE — FIXES "toFixed is not a function"
+            const costPrice = Number(Calculator.cost(item)) || 0;
+            const shopPrice = Number(customPrices[item]?.shop) || costPrice * 1.25;
+            const profit = shopPrice - costPrice;
+
+            const addBtn = needed > 0 ? `
+                <button class="success small" style="margin-bottom:4px;" onclick="Inventory.addToOrder('${item}', ${needed})">
+                    +${needed} to Order
+                </button><br>` : '';
+
+            const moveBtn = (needed > 0 && warehouse > 0) ? `
+                <button class="primary small" onclick="Inventory.moveToShop('${item}')">
+                    Move ${Math.min(needed, warehouse)} to Display
+                </button>` : '';
+
+            const row = document.createElement("tr");
+            row.style.background = low ? 'rgba(255,100,100,0.12)' : '';
+            row.innerHTML = `
                 <td><strong>${item}</strong></td>
                 <td>Crafted Item</td>
-                <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
-                    ${shop}
-                    ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${shopWeight}kg</small>` : ""}
-                </td>
                 <td style="text-align:center;">
                     <input type="number" min="0"
                         id="setwarehouse_${item.replace(/ /g, '_')}"
@@ -55,50 +70,44 @@ const Inventory = {
                     <br><small style="color:#888;">warehouse</small>
                     ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${warehouseWeight}kg</small>` : ""}
                 </td>
-                <td>
-                    <input type="number" min="0" value="${min}" 
-                        class="minstock-input" style="width:70px;font-weight:bold;"
-                        onkeypress="if(event.key==='Enter') this.onchange()"
-                        onchange="Inventory.setMin('${item}', this.value)">
-                    <br><small style="color:#888;">min stock</small>
+                <td style="color:#aaa;font-size:14px; font-weight:bold;">
+                    Cost: $${costPrice.toFixed(2)}<br>
+                    Shop: $${shopPrice.toFixed(2)}<br>
+                    <span style="color:${profit >= 0 ? '#0f8' : '#f66'};">
+                        Profit: $${profit.toFixed(2)}
+                    </span>
                 </td>
-                <td style="color:${low ? 'var(--red)' : 'var(--green)'};font-weight:bold;">
-                    ${low ? 'LOW (-' + (min - shop) + ')' : 'OK'}
-                </td>
-                <td>
-                    <input type="number" min="0" 
+                
+                <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
+                    <input type="number" min="0"
                         id="setshop_${item.replace(/ /g, '_')}" 
                         value="${shop}"
                         class="auto-save-input"
                         onblur="Inventory.setShopStock('${item}', this.value)"
-                        onkeypress="if(event.key==='Enter') this.blur()">
-                    <br><small style="color:#888;">shop display</small>
+                        onkeypress="if(event.key==='Enter') this.blur()"
+                        style="width:80px;">
+                    <br><small style="color:#888;">In Shop</small>
+                    ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${shopWeight}kg</small>` : ""}
+                </td>
+                <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
+                    <input type="number" min="0" value="${min}" 
+                        class="minstock-input" style="width:70px;font-weight:bold;"
+                        onkeypress="if(event.key==='Enter') this.onchange()"
+                        onchange="Inventory.setMin('${item}', this.value)">
+                    <br><small style="color:#888;">Min Stock</small>
+                </td>
+                <td style="color:${low ? 'var(--red)' : 'var(--green)'};font-weight:bold;">
+                    ${low ? 'LOW (-' + needed + ')' : 'OK'}
                 </td>
                 <td>
-                    ${(() => {
-                    const sh = shopStock[item] || 0;
-                    const mn = minStock[item] || 0;
-                    const needed = Math.max(0, mn - sh);
-
-                    // ALWAYS show "Add to Order" if low — even if warehouse is 0 (will be crafted)
-                    const addBtn = needed > 0 ? `
-                            <button class="success small" style="margin-bottom:4px;" onclick="Inventory.addToOrder('${item}', ${needed})">
-                                +${needed} to Order
-                            </button><br>` : '';
-
-                    // Move to Display only if warehouse has stock
-                    const moveBtn = (needed > 0 && (warehouseStock[item] || 0) > 0) ? `
-                            <button class="primary small" onclick="Inventory.moveToShop('${item}')">
-                                Move ${Math.min(needed, warehouseStock[item] || 0)} to Display
-                            </button>` : '';
-
-                    return addBtn + moveBtn + `
-                            <button class="info small" onclick="Inventory.removeFromShop('${item}')">
-                                Return to Warehouse
-                            </button>`;
-                })()}
+                    ${addBtn}
+                    ${moveBtn}
+                    <button class="info small" onclick="Inventory.removeFromShop('${item}')">
+                        Return to Warehouse
+                    </button>
                 </td>
-            </tr>`;
+            `;
+            fragment.appendChild(row);
         });
 
         // === 2. RAW MATERIALS ON DISPLAY ===
@@ -122,63 +131,76 @@ const Inventory = {
                 totalWeightShop += shop * weightPerUnit;
                 totalWeightWarehouse += warehouse * weightPerUnit;
 
-                tbody.innerHTML += `
-                <tr style="${low ? 'background:rgba(255,100,100,0.12);' : ''}">
+                const needed = Math.max(0, min - shop);
+
+                // SAFE COST & SHOP PRICE
+                const rawData = App.state.rawPrice[raw];
+                const costPrice = rawData ? Number(rawData.price || rawData) || 0 : 0;
+                const shopPrice = Number(customPrices[raw]?.shop) || costPrice * 1.25;
+                const profit = shopPrice - costPrice;
+
+                const addBtn = needed > 0 ? `
+                    <button class="success small" style="margin-bottom:4px;" onclick="Inventory.addToOrder('${raw}', ${needed})">
+                        +${needed} to Order
+                    </button><br>` : '';
+
+                const moveBtn = (needed > 0 && warehouse > 0) ? `
+                    <button class="primary small" onclick="Inventory.moveToShop('${raw}')">
+                        Move ${Math.min(needed, warehouse)} to Display
+                    </button>` : '';
+
+                const row = document.createElement("tr");
+                row.style.background = low ? 'rgba(255,100,100,0.12)' : '';
+                row.innerHTML = `
                     <td><strong>${raw}</strong></td>
                     <td>Raw Material</td>
-                    <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
-                    ${shop}
-                    ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${shopWeight}kg</small>` : ""}
-                    </td>
                     <td style="text-align:center;">
-                    <input type="number" min="0"
-                            id="setwarehouse_${raw.replace(/ /g, '_')}"
-                            value="${warehouse}"
-                            class="auto-save-input"
-                            onblur="Inventory.setWarehouseStock('${raw}', this.value)"
-                            onkeypress="if(event.key==='Enter') this.blur()">
-                    <br><small style="color:#888;">warehouse</small>
-                    ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${warehouseWeight}kg</small>` : ""}
+                        <input type="number" min="0"
+                                id="setwarehouse_${raw.replace(/ /g, '_')}"
+                                value="${warehouse}"
+                                class="auto-save-input"
+                                onblur="Inventory.setWarehouseStock('${raw}', this.value)"
+                                onkeypress="if(event.key==='Enter') this.blur()">
+                        <br><small style="color:#888;">warehouse</small>
+                        ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${warehouseWeight}kg</small>` : ""}
                     </td>
-                    <td>
-                    <input type="number" min="0" value="${min}" 
-                            class="minstock-input" style="width:70px;font-weight:bold;"
-                            onkeypress="if(event.key==='Enter') this.onchange()"
-                            onchange="Inventory.setMin('${raw}', this.value)">
-                    <br><small style="color:#888;">min stock</small>
+                    <td style="color:#aaa;font-size:14px;">
+                        Cost: $${costPrice.toFixed(2)}<br>
+                        Shop: $${shopPrice.toFixed(2)}<br>
+                        <span style="color:${profit >= 0 ? '#0f8' : '#f66'};font-weight:bold;">
+                            Profit: $${profit.toFixed(2)}
+                        </span>
                     </td>
-                    <td style="color:${low ? 'var(--red)' : 'var(--green)'};font-weight:bold;">
-                    ${low ? 'LOW (-' + (min - shop) + ')' : 'OK'}
-                    </td>
-                    <td>
-                    <input type="number" min="0" 
+                    <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
+                        <input type="number" min="0" 
                             id="setshop_${raw.replace(/ /g, '_')}" 
                             value="${shop}"
                             class="auto-save-input"
                             onblur="Inventory.setShopStock('${raw}', this.value)"
-                            onkeypress="if(event.key==='Enter') this.blur()">
-                    <br><small style="color:#888;">shop display</small>
+                            onkeypress="if(event.key==='Enter') this.blur()"
+                            style="width:80px;">
+                        <br><small style="color:#888;">shop display</small>
+                        ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${shopWeight}kg</small>` : ""}
                     </td>
                     <td>
-                        ${low ? (() => {
-                        const needed = Math.max(0, min - shop);
-                        const addBtn = needed > 0 ? `
-                                <button class="success small" style="margin-bottom:4px;" onclick="Inventory.addToOrder('${raw}', ${needed})">
-                                    +${needed} to Order
-                                </button><br>` : '';
-
-                        const moveBtn = (needed > 0 && warehouse > 0) ? `
-                                <button class="primary small" onclick="Inventory.moveToShop('${raw}')">
-                                    Move ${Math.min(needed, warehouse)} to Display
-                                </button>` : '';
-
-                        return addBtn + moveBtn;
-                    })() : ''}
+                        <input type="number" min="0" value="${min}" 
+                                class="minstock-input" style="width:70px;font-weight:bold;"
+                                onkeypress="if(event.key==='Enter') this.onchange()"
+                                onchange="Inventory.setMin('${raw}', this.value)">
+                        <br><small style="color:#888;">min stock</small>
+                    </td>
+                    <td style="color:${low ? 'var(--red)' : 'var(--green)'};font-weight:bold;">
+                        ${low ? 'LOW (-' + needed + ')' : 'OK'}
+                    </td>
+                    <td>
+                        ${addBtn}
+                        ${moveBtn}
                         <button class="danger small" onclick="Inventory.removeFromShop('${raw}')">
                             Remove from Shop
                         </button>
                     </td>
-                </tr>`;
+                `;
+                fragment.appendChild(row);
             });
 
         // === 3. RAW MATERIALS NOT ON DISPLAY ===
@@ -187,9 +209,11 @@ const Inventory = {
             .sort();
 
         if (rawNotOnDisplay.length > 0 && (!search || rawNotOnDisplay.some(r => r.toLowerCase().includes(search)))) {
-            tbody.innerHTML += `<tr><td colspan="8" style="background:#222;color:#aaa;padding:12px;text-align:center;font-weight:bold;">
-                    RAW MATERIALS NOT ON DISPLAY
-                </td></tr>`;
+            const header = document.createElement("tr");
+            header.innerHTML = `<td colspan="8" style="background:#222;color:#aaa;padding:12px;text-align:center;font-weight:bold;">
+                RAW MATERIALS NOT ON DISPLAY
+            </td>`;
+            fragment.appendChild(header);
 
             rawNotOnDisplay.forEach(raw => {
                 if (search && !raw.toLowerCase().includes(search)) return;
@@ -198,12 +222,15 @@ const Inventory = {
                 const warehouseWeight = (warehouse * weightPerUnit).toFixed(2);
                 totalWeightWarehouse += warehouse * weightPerUnit;
 
-                tbody.innerHTML += `
-                    <tr style="background:rgba(100,150,255,0.08);">
-                        <td><strong>${raw}</strong></td>
-                        <td>Raw Material</td>
-                        <td style="text-align:center;color:#666;">—</td>
-                        <td style="text-align:center;">
+                const rawData = App.state.rawPrice[raw];
+                const costPrice = rawData ? Number(rawData.price || rawData) || 0 : 0;
+
+                const row = document.createElement("tr");
+                row.style.background = "rgba(100,150,255,0.08)";
+                row.innerHTML = `
+                    <td><strong>${raw}</strong></td>
+                    <td>Raw Material</td>
+                    <td style="text-align:center;">
                         <input type="number" min="0"
                                 id="setwarehouse_${raw.replace(/ /g, '_')}"
                                 value="${warehouse}"
@@ -212,60 +239,45 @@ const Inventory = {
                                 onkeypress="if(event.key==='Enter') this.blur()">
                         <br><small style="color:#888;">warehouse stock</small>
                         ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${warehouseWeight}kg</small>` : ""}
-                        </td>
-                        <td colspan="2" style="text-align:center;color:#888;">Not for sale yet</td>
-                        <td colspan="2">
-                            <button class="success small" onclick="Inventory.addRawToShop('${raw}')">
-                                + Add to Shop Display
-                            </button>
-                        </td>
-                    </tr>`;
+                    </td>
+                    <td style="color:#aaa;font-size:14px;">
+                        Cost: $${costPrice.toFixed(2)}
+                    </td>
+                    <td style="text-align:center;color:#666;">—</td>
+                    
+                    <td colspan="2" style="text-align:center;color:#888;">Not for sale yet</td>
+                    <td>
+                        <button class="success small" onclick="Inventory.addRawToShop('${raw}')">
+                            + Add to Shop Display
+                        </button>
+                    </td>
+                `;
+                fragment.appendChild(row);
             });
         }
 
-        // === TOTAL WEIGHT SUMMARY + BEAUTIFUL CLICKABLE LOW-STOCK BADGE ===
+        // Replace all at once — super fast
+        tbody.innerHTML = "";
+        tbody.appendChild(fragment);
+
+        // === TOTAL WEIGHT SUMMARY ===
         const summary = document.getElementById("inventorySummary");
         if (summary) {
             summary.innerHTML = `
-                    <div style="display:flex;gap:20px;justify-content:center;align-items:center;flex-wrap:wrap;font-size:15px;">
-                        <span style="color:var(--green)">Shop: ${totalWeightShop.toFixed(2)}kg</span>
-                        <span style="color:#0af">Warehouse: ${totalWeightWarehouse.toFixed(2)}kg</span>
-                        <span style="color:#0ff;font-weight:bold;">TOTAL: ${(totalWeightShop + totalWeightWarehouse).toFixed(2)}kg</span>
-
-                        ${lowCount > 0 ? `
-                        <span>
-                            <button id="lowStockBadge"
-                                    style="
-                                    background: ${onlyLow ? '#c33' : 'rgba(255,50,50,0.15)'};
-                                    color: ${onlyLow ? 'white' : '#f66'};
-                                    border: 1px solid ${onlyLow ? '#f66' : '#f55'};
-                                    padding: 6px 14px;
-                                    border-radius: 20px;
-                                    font-weight: bold;
-                                    font-size: 14px;
-                                    cursor: pointer;
-                                    transition: all 0.2s ease;
-                                    box-shadow: ${onlyLow ? '0 2px 8px rgba(255,0,0,0.3)' : 'none'};
-                                    min-width: 80px;
-                                    text-shadow: ${onlyLow ? '0 1px 2px rgba(0,0,0,0.5)' : 'none'};
-                                    "
-                                    onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='${onlyLow ? '0 4px 12px rgba(255,0,0,0.4)' : '0 2px 8px rgba(255,100,100,0.3)'}'"
-                                    onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='${onlyLow ? '0 2px 8px rgba(255,0,0,0.3)' : 'none'}'"
-                                    onclick="Inventory.filterLowStock(!Inventory._filterLowOnly)">
+                <div style="display:flex;gap:20px;justify-content:center;align-items:center;flex-wrap:wrap;font-size:15px;">
+                    <span style="color:var(--green)">Shop: ${totalWeightShop.toFixed(2)}kg</span>
+                    <span style="color:#0af">Warehouse: ${totalWeightWarehouse.toFixed(2)}kg</span>
+                    <span style="color:#0ff;font-weight:bold;">TOTAL: ${(totalWeightShop + totalWeightWarehouse).toFixed(2)}kg</span>
+    
+                    ${lowCount > 0 ? `
+                    <span>
+                        <button id="lowStockBadge"
+                                style="background:${onlyLow ? '#c33' : 'rgba(255,50,50,0.15)'};color:${onlyLow ? 'white' : '#f66'};border:1px solid ${onlyLow ? '#f66' : '#f55'};padding:6px 14px;border-radius:20px;font-weight:bold;font-size:14px;cursor:pointer;"
+                                onclick="Inventory.filterLowStock(!Inventory._filterLowOnly)">
                             ${onlyLow ? 'Low Only (' + lowCount + ')' : lowCount + ' low'}
-                            </button>
-                        </span>
-                        ` : '<span style="color:var(--green);font-weight:bold;">All stocked!</span>'}
-
-                        <span id="showAllBtn" style="display:${onlyLow ? 'inline' : 'none'};">
-                        <td colspan="2">
-                            <button class="success small" onclick="Inventory.addRawToShop('${raw}')">
-                                + Add to Shop Display
-                            </button>
-                        </td>
-                        </span>
-                    </div>
-                    `;
+                        </button>
+                    </span>` : '<span style="color:var(--green);font-weight:bold;">All stocked!</span>'}
+                </div>`;
         }
     },
 
@@ -385,7 +397,6 @@ const Inventory = {
     addAllLowStock() {
         const minStock = App.state.minStock || {};
         const shopStock = App.state.shopStock || {};
-        const warehouseStock = App.state.warehouseStock || {};
 
         let addedCount = 0;
         let totalQty = 0;
@@ -395,8 +406,9 @@ const Inventory = {
             const current = shopStock[item] || 0;
             const needed = Math.max(0, min - current);
 
-            if (needed > 0 && warehouseStock[item] > 0) {
-                const toAdd = Math.min(needed, warehouseStock[item]);
+            // ADD ALL LOW STOCK ITEMS — even if warehouse is 0 (they will be crafted)
+            if (needed > 0) {
+                const toAdd = needed; // Add the full amount needed
 
                 const existing = App.state.order.find(o => o.item === item);
                 if (existing) {
@@ -420,7 +432,7 @@ const Inventory = {
         debouncedCalcRun();
 
         showToast("success", `Added ${addedCount} low stock item${addedCount > 1 ? "s" : ""} (${totalQty} total) to order`);
-        activateTab("order"); // Switch to order tab
+        activateTab("order");
     },
     addToOrder(item, qty) {
         qty = parseInt(qty) || 1;

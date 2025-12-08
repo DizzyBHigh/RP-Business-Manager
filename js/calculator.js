@@ -32,16 +32,17 @@ const Calculator = {
         // Fast cache check
         if (App.cache.cost?.[item] !== undefined) return App.cache.cost[item];
 
-        // 1. Direct price on raw material (most common)
+        // 1. Direct price on raw material
         const raw = App.state.rawPrice[item];
-        if (raw && typeof raw === 'object' && raw.price !== undefined) {
-            return App.cache.cost[item] = raw.price;
+        if (raw !== undefined) {
+            const price = typeof raw === 'object' ? raw.price : raw;
+            return App.cache.cost[item] = Number(price) || 0;
         }
 
-        // 2. Direct price on recipe (rare override)
+        // 2. Direct price on recipe (override)
         const recipe = App.state.recipes[item];
-        if (recipe && recipe.price !== undefined) {
-            return App.cache.cost[item] = recipe.price;
+        if (recipe?.price !== undefined) {
+            return App.cache.cost[item] = Number(recipe.price) || 0;
         }
 
         // 3. Calculate from ingredients
@@ -51,11 +52,14 @@ const Calculator = {
 
         let total = 0;
         for (const [ing, qty] of Object.entries(recipe.i)) {
-            total += this.cost(ing) * qty;
+            const ingCost = this.cost(ing); // RECURSIVE CALL
+            total += (Number(ingCost) || 0) * qty;
         }
 
-        const yieldAmount = recipe.y || 1;
-        return App.cache.cost[item] = total / yieldAmount;
+        const yieldAmount = Number(recipe.y) || 1;
+        const finalCost = total / yieldAmount;
+
+        return App.cache.cost[item] = finalCost;
     },
     resolve(item, need) {
         const r = App.state.recipes[item];
