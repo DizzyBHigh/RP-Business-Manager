@@ -120,42 +120,61 @@ const RawMaterials = {
     },
 
     // RENDER RAW PRICES — NOW 100% RELIABLE
-    renderPrices() {
+    renderPrices(filter = "") {
         const tbody = document.querySelector("#rawTable tbody");
         if (!tbody) return;
 
-        tbody.innerHTML = "";
+        const rawPrice = App.state.rawPrice || {};
+        let items = Object.keys(rawPrice);
+
+        // APPLY FILTER IF PROVIDED
+        if (filter) {
+            const lower = filter.toLowerCase().trim();
+            items = items.filter(name => name.toLowerCase().includes(lower));
+        }
 
         // Sort alphabetically
-        const sorted = Object.keys(App.state.rawPrice).sort((a, b) => a.localeCompare(b));
+        items.sort((a, b) => a.localeCompare(b));
 
-        for (const m of sorted) {
-            const data = App.state.rawPrice[m];
+        tbody.innerHTML = "";
+
+        if (items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:#888;font-size:16px;">
+                ${filter ? `No raw materials match "${filter}"` : "No raw materials defined yet."}<br>
+                <strong>Add your first one below!</strong>
+            </td></tr>`;
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+
+        for (const m of items) {
+            const data = rawPrice[m];
             const price = (data && typeof data === 'object' && data.price !== undefined) ? data.price : 0;
             const weight = (data && typeof data === 'object' && data.weight !== undefined) ? data.weight : 0;
 
             const tr = document.createElement("tr");
             tr.innerHTML = `
-        <td style="font-weight:bold;color:var(--accent);padding:10px;">${m}</td>
-        <td style="padding:8px;">
-          <input type="number" step="0.01" value="${price.toFixed(2)}" 
-                 style="width:110px;background:#111;color:white;border:1px solid #444;padding:8px;border-radius:4px;font-size:14px;"
-                 class="priceInput">
-          <small style="color:#888;margin-left:6px;">$/unit</small>
-        </td>
-        <td style="padding:8px;">
-          <input type="number" step="0.01" value="${weight.toFixed(2)}" 
-                 style="width:100px;background:#001122;color:#0af;border:2px solid #00aaff;padding:8px;border-radius:4px;font-weight:bold;font-size:14px;"
-                 class="weightInput">
-          <strong style="color:#0af;margin-left:8px;">kg/unit</strong>
-        </td>
-        <td style="text-align:center;padding:8px;">
-          <button class="small success" onclick="RawMaterials.savePrice('${m}', this)"
-                  style="padding:8px 16px;font-size:13px;border-radius:6px;">Save</button>
-          <button class="danger small" onclick="RawMaterials.remove('${m}')"
-                  style="padding:8px 12px;margin-left:6px;font-size:13px;border-radius:6px;">Remove</button>
-        </td>
-      `;
+                <td style="font-weight:bold;color:var(--accent);padding:10px;">${m}</td>
+                <td style="padding:8px;">
+                  <input type="number" step="0.01" value="${price.toFixed(2)}" 
+                         style="width:110px;background:#111;color:white;border:1px solid #444;padding:8px;border-radius:4px;font-size:14px;"
+                         class="priceInput">
+                  <small style="color:#888;margin-left:6px;">$/unit</small>
+                </td>
+                <td style="padding:8px;">
+                  <input type="number" step="0.01" value="${weight.toFixed(2)}" 
+                         style="width:100px;background:#001122;color:#0af;border:2px solid #00aaff;padding:8px;border-radius:4px;font-weight:bold;font-size:14px;"
+                         class="weightInput">
+                  <strong style="color:#0af;margin-left:8px;">kg/unit</strong>
+                </td>
+                <td style="text-align:center;padding:8px;">
+                  <button class="small success" onclick="RawMaterials.savePrice('${m}', this)"
+                          style="padding:8px 16px;font-size:13px;border-radius:6px;">Save</button>
+                  <button class="danger small" onclick="RawMaterials.remove('${m}')"
+                          style="padding:8px 12px;margin-left:6px;font-size:13px;border-radius:6px;">Remove</button>
+                </td>
+            `;
 
             // Highlight items with weight
             if (weight > 0) {
@@ -163,16 +182,10 @@ const RawMaterials = {
                 tr.style.borderLeft = "4px solid #0af";
             }
 
-            tbody.appendChild(tr);
+            fragment.appendChild(tr);
         }
 
-        // Show message if empty
-        if (sorted.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:40px;color:#888;font-size:16px;">
-        No raw materials defined yet.<br>
-        <strong>Add your first one below!</strong>
-      </td></tr>`;
-        }
+        tbody.appendChild(fragment);
     },
 
     // SAVE PRICE + WEIGHT — BULLETPROOF
@@ -269,4 +282,8 @@ document.getElementById('purchaseItemSearch')?.addEventListener('input', functio
 //trigger dropdown update when raw material page opens
 document.querySelector('[data-tab="rawpurchase"]')?.addEventListener("click", () => {
     setTimeout(EmployeeSelect.refreshAll(), 100);
+});
+document.getElementById("newRawName")?.addEventListener("input", function (e) {
+    const filter = e.target.value;
+    RawMaterials.renderPrices(filter);
 });

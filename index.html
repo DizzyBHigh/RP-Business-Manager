@@ -554,7 +554,9 @@
     <!-- RAW MATERIAL PURCHASE — CLEAN & FINAL VERSION -->
     <div id="rawpurchase" class="tab-content">
         <h2>Purchase Raw Materials</h2>
-        <p style="color:#888; margin-bottom:20px;">Record incoming raw materials • Adds to warehouse • Logs in ledger
+        <p style="color:#888; margin-bottom:20px; font-size: 18px; text-align: center;">Record incoming raw materials •
+            Adds to warehouse •
+            Logs in ledger
         </p>
 
         <div
@@ -575,15 +577,15 @@
                     <label
                         style="display:block; margin-bottom:8px; font-weight:bold; color:var(--accent);">Quantity</label>
                     <input type="number" id="purchaseQty" value="1" min="1" step="1"
-                        style="width:100%; padding:12px; font-size:16px; border-radius:8px; border:1px solid #555;">
+                        style="padding:12px; font-size:16px; border-radius:8px; border:1px solid #555;">
                 </div>
 
                 <div>
                     <label style="display:block; margin-bottom:8px; font-weight:bold; color:var(--accent);">Total Paid
                         ($)</label>
                     <input type="number" step="0.01" id="purchasePrice" placeholder="0.00"
-                        style="width:100%; padding:12px; font-size:16px; border-radius:8px; border:1px solid #555;">
-                    <small style="color:#aaa; font-size:11px;">Leave blank to use current price</small>
+                        style="padding:12px; font-size:16px; border-radius:8px; border:1px solid #555;">
+                    Leave blank to use current price, Enter 0 if Harvested by yourself
                 </div>
             </div>
 
@@ -592,7 +594,7 @@
                     <label
                         style="display:block; margin-bottom:8px; font-weight:bold; color:var(--accent);">Supplier</label>
                     <input type="text" id="purchaseSupplier" placeholder="e.g. Lumber Mill, Amazon, Player Trade"
-                        style="width:100%; padding:12px; font-size:16px; border-radius:8px;">
+                        style="width:80%; font-size:16px; border-radius:8px;">
                 </div>
 
                 <div>
