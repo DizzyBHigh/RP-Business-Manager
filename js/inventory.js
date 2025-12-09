@@ -172,14 +172,12 @@ const Inventory = {
                         </span>
                     </td>
                     <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
-                        <input type="number" min="0" 
-                            id="setshop_${raw.replace(/ /g, '_')}" 
-                            value="${shop}"
-                            class="auto-save-input"
-                            onblur="Inventory.setShopStock('${raw}', this.value)"
-                            onkeypress="if(event.key==='Enter') this.blur()"
-                            style="width:80px;">
-                        <br><small style="color:#888;">shop display</small>
+                        <input type="number" min="0" value="${min}" 
+                        class="minstock-input" style="width:70px;font-weight:bold;"
+                        onkeypress="if(event.key==='Enter') this.onchange()"
+                        onchange="Inventory.setMin('${item}', this.value)"
+                        title="0 = Not on display">
+                <br><small style="color:#888;">min stock</small>
                         ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${shopWeight}kg</small>` : ""}
                     </td>
                     <td>
@@ -400,21 +398,17 @@ const Inventory = {
         const num = parseInt(val) || 0;
         const previous = App.state.minStock[item] || 0;
 
-        if (num === 0) {
-            delete App.state.minStock[item];
-            delete App.state.shopStock[item]; // optional: clear shop stock when min=0
-        } else {
-            App.state.minStock[item] = num;
-            // Ensure shopStock exists (prevents undefined errors)
-            if (App.state.shopStock[item] === undefined) {
-                App.state.shopStock[item] = 0;
-            }
+        // Always keep the entry — set to 0 instead of deleting
+        App.state.minStock[item] = num;
+
+        // Only clear shopStock if min = 0 and shopStock is 0 (optional cleanup)
+        if (num === 0 && (App.state.shopStock[item] || 0) === 0) {
+            delete App.state.shopStock[item];
         }
 
-        // Save both at once — faster and more reliable
         App.save("minStock");
         if (num > 0 || previous > 0) {
-            App.save("shopStock"); // only if relevant
+            App.save("shopStock"); // Save shopStock only if relevant
         }
 
         // Visual feedback
@@ -426,22 +420,20 @@ const Inventory = {
             }
         }
 
-        // Update status cell instantly (LOW / OK) without full re-render
+        // Update status cell instantly
         const rows = document.querySelectorAll("#inventoryTable tr");
-        let statusCell = null;
-
         for (const row of rows) {
             if (row.textContent.includes(item)) {
-                statusCell = row.cells[5]; // Status column is index 5
+                const statusCell = row.cells[5]; // Status column
+                if (statusCell) {
+                    const shop = App.state.shopStock[item] || 0;
+                    const low = shop < num;
+                    statusCell.innerHTML = low
+                        ? `<span style="color:var(--red);font-weight:bold;">LOW (-${num - shop})</span>`
+                        : `<span style="color:var(--green);font-weight:bold;">OK</span>`;
+                }
                 break;
             }
-        }
-        if (statusCell) {
-            const shop = App.state.shopStock[item] || 0;
-            const low = shop < num;
-            statusCell.innerHTML = low
-                ? `<span style="color:var(--red);font-weight:bold;">LOW (-${num - shop})</span>`
-                : `<span style="color:var(--green);font-weight:bold;">OK</span>`;
         }
     },
 
