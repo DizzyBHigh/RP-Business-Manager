@@ -290,7 +290,7 @@ const RecipeEditor = {
         delete App.state.recipes[name];
 
         // Direct Firestore delete — bypasses App.save() completely
-        const deletePath = `recipes.${name}`;
+        const deletePath = `recipes${name}`;
 
         try {
             await SHARED_DOC_REF.update({
@@ -320,42 +320,45 @@ const RecipeEditor = {
 
         RecipeEditor.renderRecipeTable();
     },
-    save() {
-        const originalName = document.getElementById("recipeSearch").value.trim();
-        const newName = sanitizeItemName(document.getElementById("editItemName").value.trim());
-        if (!newName) return showToast("fail", "Name required!");
-
-        // Build recipe
-        const ingredients = {};
-        document.querySelectorAll("#editIngredients .ingredient-row").forEach(r => {
-            const ing = r.querySelector("input[type=text]").value.trim();
-            const qty = parseInt(r.querySelector("input[type=number]").value) || 1;
-            if (ing) ingredients[ing] = qty;
-        });
-
-        const recipe = {
-            i: ingredients,
-            y: parseInt(document.getElementById("editYield").value) || 1,
-            weight: parseFloat(document.getElementById("editWeight").value) || 0
-        };
-
-        // If renamed → delete old key first
-        if (newName !== originalName) {
-            SHARED_DOC_REF.update({
-                [`recipes.${originalName}`]: firebase.firestore.FieldValue.delete()
-            }).catch(() => { });
+    async del() {
+        // Get name from edit form
+        const nameField = document.getElementById("editItemName");
+        if (!nameField || !nameField.value.trim()) {
+            return showToast("fail", "No recipe loaded to delete!");
         }
 
-        // Save new/updated recipe
-        App.state.recipes[newName] = recipe;
+        const name = nameField.value.trim();
 
-        // Use App.save() for the actual save (it works for adding/updating)
-        App.save("recipes");
+        const ok = await showConfirm(`Delete "${name}" forever? This cannot be undone.`);
+        if (!ok) return;
 
-        // UI cleanup
+        // Remove from local state
+        delete App.state.recipes[name];
+
+        // SAFE DELETE — only if name exists
+        if (name && name !== "") {
+            try {
+                await SHARED_DOC_REF.update({
+                    [`recipes.${name}`]: firebase.firestore.FieldValue.delete()
+                });
+                console.log("SUCCESS: Recipe deleted from Firestore:", name);
+            } catch (err) {
+                console.error("DELETE FAILED:", err);
+                showToast("fail", "Failed to delete from server — check console");
+                return;
+            }
+        }
+
+        // Force refresh
+        App.refresh();
+        debouncedCalcRun();
+        refreshAllStockLists();
+
+        // Close edit form
         document.getElementById("editArea").style.display = "none";
-        document.getElementById("recipeSearch").value = newName;
-        showToast("success", `"${newName}" saved!`);
+        document.getElementById("recipeSearch").value = "";
+
+        showToast("success", `"${name}" obliterated from existence.`);
         RecipeEditor.renderRecipeTable();
     },
     cancel() {
