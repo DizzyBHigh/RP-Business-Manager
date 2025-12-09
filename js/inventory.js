@@ -427,7 +427,15 @@ const Inventory = {
         }
 
         // Update status cell instantly (LOW / OK) without full re-render
-        const statusCell = document.querySelector(`td:contains('${item}')`)?.closest('tr')?.cells[5];
+        const rows = document.querySelectorAll("#inventoryTable tr");
+        let statusCell = null;
+
+        for (const row of rows) {
+            if (row.textContent.includes(item)) {
+                statusCell = row.cells[5]; // Status column is index 5
+                break;
+            }
+        }
         if (statusCell) {
             const shop = App.state.shopStock[item] || 0;
             const low = shop < num;
