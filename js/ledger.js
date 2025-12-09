@@ -171,7 +171,8 @@ const Ledger = {
                 desc = `Restock (${e.type === "restock_shop" ? "Shop" : "Warehouse"})`;
             } else if (e.type === "raw_purchase" || e.type === "purchase") {
                 amount = -(e.totalCost || Math.abs(e.amount) || 0);
-                desc = `Bought ${e.qty || "?"}× ${e.item || "items"}`;
+                desc = `${e.description}`;
+                //  Bought ${ e.qty || "?" }× ${ e.item || "items" }
             } else if (e.type === "commission_payment") {
                 amount = -(Math.abs(e.amount) || 0);
                 desc = e.description || "Commission Payment";

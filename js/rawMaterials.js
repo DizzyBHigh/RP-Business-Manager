@@ -67,7 +67,7 @@ const RawMaterials = {
             weightPerUnit,
             totalWeight: parseFloat(totalWeight.toFixed(2)),
             supplier,
-            description: `Purchased ${qty}× ${name} from ${supplier}\n${totalWeight.toFixed(2)}kg @ $${unitPrice.toFixed(2)}/ea = $${totalCost.toFixed(2)}`
+            description: `Purchased ${qty}× ${name} - ${supplier}\n${totalWeight.toFixed(2)}kg @ $${unitPrice.toFixed(2)}/ea = $${totalCost.toFixed(2)}`
         };
 
         App.state.ledger.push(record);
