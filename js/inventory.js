@@ -26,7 +26,7 @@ const Inventory = {
 
             const shop = shopStock[item] || 0;
             const warehouse = warehouseStock[item] || 0;
-            const min = minStock[item] || 0;
+            const min = minStock[item] ?? 0; // or just || 0 is fine
             const low = shop < min;
             if (low) lowCount++;
 
@@ -112,7 +112,7 @@ const Inventory = {
 
         // === 2. RAW MATERIALS ON DISPLAY ===
         Object.keys(minStock)
-            .filter(k => minStock[k] > 0 && rawPrice[k] && !recipes[k])
+            .filter(k => (minStock[k] >= 0) && rawPrice[k] && !recipes[k])  // Changed > 0 to >= 0
             .sort()
             .forEach(raw => {
                 if (search && !raw.toLowerCase().includes(search)) return;
@@ -483,7 +483,7 @@ const Inventory = {
         let totalQty = 0;
 
         Object.keys(minStock).forEach(item => {
-            const min = minStock[item] || 0;
+            const min = minStock[item] ?? 0; // or just || 0 is fine
             const current = shopStock[item] || 0;
             const needed = Math.max(0, min - current);
 
