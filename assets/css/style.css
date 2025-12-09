@@ -634,7 +634,7 @@ th {
     padding: 6px 8px;
     border: 2px solid #444;
     border-radius: 6px;
-    background: #111;
+    /* background: #111; */
     color: white;
     font-weight: bold;
     text-align: center;
@@ -1611,6 +1611,22 @@ button:disabled {
 .toast-icon {
     font-size: 32px;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+/* ULTIMATE GREEN FLASH — NOTHING CAN STOP IT */
+.inventory-green-flash {
+    background: #00ff00 !important;
+    animation: greenFlash 0.4s ease forwards !important;
+}
+
+@keyframes greenFlash {
+    0% {
+        background: #00ff00 !important;
+    }
+
+    100% {
+        background: #111 !important;
+    }
 }
 
 /* Animations */

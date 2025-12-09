@@ -337,7 +337,7 @@ const RecipeEditor = {
         // If renamed → delete old key first
         if (newName !== originalName) {
             SHARED_DOC_REF.update({
-                [`recipes${originalName}`]: firebase.firestore.FieldValue.delete()
+                [`recipes.${originalName}`]: firebase.firestore.FieldValue.delete()
             }).catch(() => { });
         }
 
