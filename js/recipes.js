@@ -275,52 +275,6 @@ const RecipeEditor = {
     },
 
     async del() {
-        // Get the recipe name from the edit form (not the search box!)
-        const nameField = document.getElementById("editItemName");
-        if (!nameField || !nameField.value.trim()) {
-            return showToast("fail", "No recipe loaded to delete!");
-        }
-
-        const name = nameField.value.trim();
-
-        const ok = await showConfirm(`Delete "${name}" forever? This cannot be undone.`);
-        if (!ok) return;
-
-        // Remove from local state first
-        delete App.state.recipes[name];
-
-        // Direct Firestore delete — bypasses App.save() completely
-        const deletePath = `recipes${name}`;
-
-        try {
-            await SHARED_DOC_REF.update({
-                [deletePath]: firebase.firestore.FieldValue.delete()
-            });
-
-            console.log("SUCCESS: Recipe deleted from Firestore:", name);
-
-            // Force refresh everything
-            App.refresh();
-            debouncedCalcRun();
-            refreshAllStockLists();
-
-            // Close edit form
-            document.getElementById("editArea").style.display = "none";
-            document.getElementById("recipeSearch").value = "";
-
-            showToast("success", `"${name}" has been obliterated from existence.`);
-        } catch (err) {
-            console.error("DELETE FAILED:", err);
-            if (err.code === "permission-denied") {
-                showToast("fail", "PERMISSION DENIED — Check Firestore rules");
-            } else {
-                showToast("fail", "Delete failed — check console (F12)");
-            }
-        }
-
-        RecipeEditor.renderRecipeTable();
-    },
-    async del() {
         // Get name from edit form
         const nameField = document.getElementById("editItemName");
         if (!nameField || !nameField.value.trim()) {
@@ -359,6 +313,44 @@ const RecipeEditor = {
         document.getElementById("recipeSearch").value = "";
 
         showToast("success", `"${name}" obliterated from existence.`);
+        RecipeEditor.renderRecipeTable();
+    },
+    save() {
+        const originalName = document.getElementById("recipeSearch").value.trim();
+        const newName = sanitizeItemName(document.getElementById("editItemName").value.trim());
+        if (!newName) return showToast("fail", "Name required!");
+
+        // Build recipe
+        const ingredients = {};
+        document.querySelectorAll("#editIngredients .ingredient-row").forEach(r => {
+            const ing = r.querySelector("input[type=text]").value.trim();
+            const qty = parseInt(r.querySelector("input[type=number]").value) || 1;
+            if (ing) ingredients[ing] = qty;
+        });
+
+        const recipe = {
+            i: ingredients,
+            y: parseInt(document.getElementById("editYield").value) || 1,
+            weight: parseFloat(document.getElementById("editWeight").value) || 0
+        };
+
+        // If renamed → delete old key first
+        if (newName !== originalName) {
+            SHARED_DOC_REF.update({
+                [`recipes${originalName}`]: firebase.firestore.FieldValue.delete()
+            }).catch(() => { });
+        }
+
+        // Save new/updated recipe
+        App.state.recipes[newName] = recipe;
+
+        // Use App.save() for the actual save (it works for adding/updating)
+        App.save("recipes");
+
+        // UI cleanup
+        document.getElementById("editArea").style.display = "none";
+        document.getElementById("recipeSearch").value = newName;
+        showToast("success", `"${newName}" saved!`);
         RecipeEditor.renderRecipeTable();
     },
     cancel() {
