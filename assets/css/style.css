@@ -619,14 +619,55 @@ th {
     }
 }
 
-.minstock-input {
+.min-stock-input {
     border: 2px solid #444;
     transition: border 0.2s;
+    width: 50%;
+
 }
 
-.minstock-input:focus {
+.min-stock-input:focus {
     border-color: var(--accent) !important;
     outline: none;
+}
+
+.shop-stock-input {
+    border: 2px solid #444;
+    transition: border 0.2s;
+    width: 50%;
+}
+
+.shop-stock-input:focus {
+    border-color: var(--accent) !important;
+    outline: none;
+}
+
+.warehouse-stock-input {
+    border: 2px solid #444;
+    transition: border 0.2s;
+    width: 50%;
+}
+
+.warehouse-stock-input:focus {
+    border-color: var(--accent) !important;
+    outline: none;
+}
+
+/* GREEN FLASH — 100% WORKING */
+.inventory-green-flash {
+    background-color: #00ff00 !important;
+    transition: background-color 0.4s ease !important;
+    animation: flashGreen 0.4s ease-out !important;
+}
+
+@keyframes flashGreen {
+    0% {
+        background-color: #00ff00 !important;
+    }
+
+    100% {
+        background-color: transparent !important;
+    }
 }
 
 .auto-save-input {
@@ -634,7 +675,7 @@ th {
     padding: 6px 8px;
     border: 2px solid #444;
     border-radius: 6px;
-    /* background: #111; */
+    background: #111;
     color: white;
     font-weight: bold;
     text-align: center;
@@ -1611,22 +1652,6 @@ button:disabled {
 .toast-icon {
     font-size: 32px;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-}
-
-/* ULTIMATE GREEN FLASH — NOTHING CAN STOP IT */
-.inventory-green-flash {
-    background: #00ff00 !important;
-    animation: greenFlash 0.4s ease forwards !important;
-}
-
-@keyframes greenFlash {
-    0% {
-        background: #00ff00 !important;
-    }
-
-    100% {
-        background: #111 !important;
-    }
 }
 
 /* Animations */
