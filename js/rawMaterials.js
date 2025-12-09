@@ -12,26 +12,16 @@ const RawMaterials = {
         const supplier = document.getElementById("purchaseSupplier").value.trim() || "Unknown";
         const employee = document.getElementById("purchaseEmployee").value || App.state.currentEmployee || "Manager";
 
-        if (!name) return showToast("fail", "Please select or enter an item.");
+        if (!name) return showToast("fail", "Please select or enter a raw material.");
         if (qty <= 0) return showToast("fail", "Quantity must be at least 1.");
 
-        // CHECK IF IT'S A CRAFTED ITEM OR RAW
-        const isCrafted = !!App.state.recipes[name];
         const rawData = App.state.rawPrice[name];
-
-        let basePrice = 0;
-        let weightPerUnit = 0;
-
-        if (isCrafted) {
-            basePrice = Calculator.cost(name) || 0;
-            weightPerUnit = Calculator.weight(name) || 0;
-        } else if (rawData) {
-            basePrice = rawData.price ?? 0;
-            weightPerUnit = rawData.weight ?? 0;
-        } else {
-            return showToast("fail", `"${name}" not found in raw materials or recipes!`);
+        if (!rawData || typeof rawData !== 'object') {
+            return showToast("fail", `"${name}" is not in Raw Prices!\nAdd it first in the Raw Prices tab.`);
         }
 
+        const basePrice = rawData.price ?? 0;
+        const weightPerUnit = rawData.weight ?? 0;
         const unitPrice = totalPaid !== null ? (totalPaid / qty) : basePrice;
         const totalCost = totalPaid !== null ? totalPaid : (basePrice * qty);
         const totalWeight = qty * weightPerUnit;
@@ -50,7 +40,7 @@ const RawMaterials = {
         const ok = await showConfirm(preview);
         if (!ok) return;
 
-        // UPDATE WAREHOUSE STOCK — WORKS FOR BOTH RAW AND CRAFTED
+        // THIS WAS THE MISSING LINE — ADD TO WAREHOUSE STOCK!
         App.state.warehouseStock[name] = (App.state.warehouseStock[name] || 0) + qty;
 
         const now = new Date();
@@ -67,13 +57,18 @@ const RawMaterials = {
             weightPerUnit,
             totalWeight: parseFloat(totalWeight.toFixed(2)),
             supplier,
-            description: `Purchased ${qty}× ${name} - ${supplier}\n${totalWeight.toFixed(2)}kg @ $${unitPrice.toFixed(2)}/ea = $${totalCost.toFixed(2)}`
+            description: `Purchased ${qty}× ${name} from ${supplier}\n${totalWeight.toFixed(2)}kg @ $${unitPrice.toFixed(2)}/ea = $${totalCost.toFixed(2)}`
         };
 
         App.state.ledger.push(record);
-        await App.save("ledger");
-        await App.save("warehouseStock");
 
+        // Save BOTH ledger AND warehouse stock
+        await Promise.all([
+            App.save("ledger"),
+            App.save("warehouseStock")
+        ]);
+
+        // Success message
         const successMsg = document.getElementById("purchaseSuccess");
         successMsg.innerHTML = `
           <div style="text-align:center;padding:20px;background:#001a00;border:2px solid #0f0;border-radius:8px;">
@@ -101,6 +96,7 @@ const RawMaterials = {
         document.getElementById("purchasePrice").value = "";
         document.getElementById("purchaseSupplier").value = "";
 
+        // Refresh displays
         Inventory.render();
         Ledger.render();
         debouncedCalcRun();
