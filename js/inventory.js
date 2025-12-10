@@ -288,7 +288,7 @@ const Inventory = {
                         Cost: 
                         <span style=" font-weight: bold; color:${costPrice >= 0 ? '#0f8' : '#f66'};">$${costPrice.toFixed(2)}</span>
                     </td>
-                    <td /* colspan="2" */ style="text-align:center;color:#666;">—</td>
+                    <td  style="text-align:center;color:#666;">—</td>
                     <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
                         <input type="number" min="0"
                             class=" warehouse-stock-input"
@@ -297,7 +297,7 @@ const Inventory = {
                         <br><span style="color:#888;">warehouse stock</span>
                         ${weightPerUnit > 0 ? `<br><span style="color:#0af;">${warehouseWeight}kg</span>` : ""}
                     </td>
-                    <td colspan="2" style="text-align:center;color:#888;">Not for sale yet</td>
+                    <td colspan="3" style="text-align:center;color:#888;">Not for sale yet</td>
                     <td>
                         <button class="success small" onclick="Inventory.addRawToShop('${raw}')">
                             + Add to Shop Display
