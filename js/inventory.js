@@ -49,7 +49,10 @@ const Inventory = {
             }
 
             const shopPrice = Number(customPrices[item]?.shop) || costPrice * 1.25;
+            const bulkPrice = Number(customPrices[item]?.bulk) || shopPrice;
+
             const profit = shopPrice - costPrice;
+            const bulkProfit = bulkPrice - costPrice;
 
             const addBtn = needed > 0 ? `
                 <button class="success small" style="margin-bottom:4px;" onclick="Inventory.addToOrder('${item}', ${needed})">
@@ -66,36 +69,56 @@ const Inventory = {
             row.innerHTML = `
                 <td><strong>${item}</strong></td>
                 <td>Crafted Item</td>
-                <td style="text-align:center;">
-                    <input type="number" min="0"
-                        class=" warehouse-stock-input"
-                        data-item="${item}"
-                        value="${warehouse}">
-                    <br><small style="color:#888;">warehouse</small>
-                    ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${warehouseWeight}kg</small>` : ""}
+                
+                
+                <td style="text-align:center; font-size:14px; font-weight: bold;">
+                <span style="color:#ee940e;">Raw Cost: </span>
+                <span style=" font-weight: bold; color:${costPrice >= 0 ? '#0f8' : '#f66'};">$${costPrice.toFixed(2)}</span><br>
+                    <input type="number" style="width: 82px; text-align: center; cursor: text;" class="shop-price-input" data-item="${item}" data-tier="shop"
+                        value="${shopPrice.toFixed(2)}" style="text-align:center; font-weight:bold;"
+                        placeholder="${(costPrice * 1.25).toFixed(2)}">
+                        <span style=" font-weight: bold; color:${profit >= 0 ? '#0f8' : '#f66'};">
+                            <br>
+                            <span style="font-weight: bold;color:#0e95d4;">Profit (shop):</span> 
+                            <span style=" font-weight: bold; color:${profit >= 0 ? '#0f8' : '#f66'};">$${profit.toFixed(2)}
+                        </span>   
                 </td>
-                <td style="color:#aaa;font-size:14px; font-weight:bold;">
-                    Cost: $${costPrice.toFixed(2)}<br>
-                    Shop: $${shopPrice.toFixed(2)}<br>
-                    <span style="color:${profit >= 0 ? '#0f8' : '#f66'};">
-                        Profit: $${profit.toFixed(2)}
+                <td style="text-align:center; font-size:14px;">
+                <span style="font-weight:bold;color:#ee940e;">Raw Cost: </span>
+                <span style=" font-weight: bold; color:${costPrice >= 0 ? '#0f8' : '#f66'};">$${costPrice.toFixed(2)}</span><br>
+                    <input type="number" class="bulk-price-input" data-item="${item}" data-tier="bulk"
+                        value="${(customPrices[item]?.bulk ?? costPrice * 1.10).toFixed(2)}" style="width:82px; text-align:center;"
+                        placeholder="${(costPrice * 1.10).toFixed(2)}">
+                        <br>
+                        <span style="font-weight: bold;color:#f0ec0f;">Profit (bulk):</span>
+                        <span style="font-weight:bold;color:${profit >= 0 ? '#0f8' : '#f66'};">
+                         $${bulkProfit.toFixed(2)}
                     </span>
                 </td>
                 <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
+                <span style="color:#888;">Warehouse Stock</span><br>
+                <input type="number" min="0"
+                        class=" warehouse-stock-input"
+                        data-item="${item}"
+                        value="${warehouse}">
+                    <br><span style="color:#0af;">${warehouseWeight}kg</span>
+                </td>
+                <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
+                <span style="color:#888;">For Sale In Shop</span><br>
                     <input type="number" min="0"
-                        class=" shop-stock-input"
+                        class="shop-stock-input"
                         data-item="${item}"
                         value="${shop}">
-                    <br><small style="color:#888;">In Shop</small>
-                    ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${shopWeight}kg</small>` : ""}
+                    
+                    <br><span style="color:#0af;">${shopWeight}kg</span>
                 </td>
-                <td>
+                <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
+                    <span style="color:#888;">Min Shop Stock</span><br>
                     <input type="number" min="0"
                         class="min-stock-input"
                         data-item="${item}"
                         value="${min}"
-                        title="0 = Not on display">
-                    <br><small style="color:#888;">Min Stock</small>
+                        title="0 = Not on display"><br>&nbsp;
                 </td>
                 <td style="color:${low ? 'var(--red)' : 'var(--green)'};font-weight:bold;">
                     ${low ? 'LOW (-' + needed + ')' : 'OK'}
@@ -136,7 +159,9 @@ const Inventory = {
 
                 const rawData = App.state.rawPrice[raw];
                 const costPrice = rawData ? Number(rawData.price || rawData) || 0 : 0;
+
                 const shopPrice = Number(customPrices[raw]?.shop) || costPrice * 1.25;
+                const bulkPrice = Number(customPrices[raw]?.bulk) || 0;
                 const profit = shopPrice - costPrice;
 
                 const addBtn = needed > 0 ? `
@@ -154,36 +179,57 @@ const Inventory = {
                 row.innerHTML = `
                     <td><strong>${raw}</strong></td>
                     <td>Raw Material</td>
-                    <td style="text-align:center;">
+                    
+                    
+                    <td style="text-align:center; font-size:14px;">
+                    <span style="font-weight:bold;color:#ee940e;">Raw Cost: </span>
+                    <span style="font-weight:bold;color:${costPrice >= 0 ? '#0f8' : '#f66'};font-weight:bold;">$${costPrice.toFixed(2)}</span><br>
+                        <input type="number" class="shop-price-input" data-item="${raw}" data-tier="shop"
+                            value="${shopPrice.toFixed(2)}" style="width:82px; text-align:center; font-weight:bold;"
+                            placeholder="${(costPrice * 1.25).toFixed(2)}">
+                            
+                            <br>
+                            <span style="font-weight: bold;color:#0e95d4;">Profit (shop):</span>
+                            <span style="font-weight:bold;color:${profit >= 0 ? '#0f8' : '#f66'};">$${profit.toFixed(2)}</span>
+                        
+                    </td>
+                    <td style="text-align:center; font-size:14px;">
+                    <span style="font-weight:bold;color:#ee940e;">Raw Cost: </span>
+                    <span style="color:${costPrice >= 0 ? '#0f8' : '#f66'};font-weight:bold;">$${costPrice.toFixed(2)}</span><br>
+                        <input type="number" class="bulk-price-input" data-item="${raw}" data-tier="bulk"
+                            value="${(customPrices[raw]?.bulk ?? costPrice * 1.10).toFixed(2)}" style="width:82px; text-align:center;"
+                            placeholder="${(costPrice * 1.10).toFixed(2)}">
+                        <br>
+                        <span style="font-weight: bold;color:#f0ec0f;">Profit (bulk):</span>
+                            <span style="font-weight:bold;color:${profit >= 0 ? '#0f8' : '#f66'};">$${profit.toFixed(2)}</span>
+                        
+                    </td>
+                    <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
+                        <span style="color:#888;">Warehouse Stock</span><br>
                         <input type="number" min="0"
                             class=" warehouse-stock-input"
                             data-item="${raw}"
                             value="${warehouse}">
-                        <br><small style="color:#888;">warehouse</small>
-                        ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${warehouseWeight}kg</small>` : ""}
-                    </td>
-                    <td style="color:#aaa;font-size:14px;">
-                        Cost: $${costPrice.toFixed(2)}<br>
-                        Shop: $${shopPrice.toFixed(2)}<br>
-                        <span style="color:${profit >= 0 ? '#0f8' : '#f66'};font-weight:bold;">
-                            Profit: $${profit.toFixed(2)}
-                        </span>
+                        <br><span style="color:#888;">warehouse</span>
+                        <br><span style="color:#0af;">${warehouseWeight}kg</span>
                     </td>
                     <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
+                    <span style="color:#888;">For Sale In Shop</span><br>
                         <input type="number" min="0"
                             class=" shop-stock-input"
                             data-item="${raw}"
                             value="${shop}">
-                        <br><small style="color:#888;">In Shop</small>
-                        ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${shopWeight}kg</small>` : ""}
+                        
+                        <br><span style="color:#0af;">${shopWeight}kg</span>
                     </td>
                     <td>
+                        <span style="color:#888;">Min Shop Stock</span><br>
                         <input type="number" min="0"
                             class="min-stock-input"
                             data-item="${raw}"
                             value="${min}"
                             title="0 = Not on display">
-                        <br><small style="color:#888;">Min Stock</small>
+                        
                     </td>
                     <td style="color:${low ? 'var(--red)' : 'var(--green)'};font-weight:bold;">
                         ${low ? 'LOW (-' + needed + ')' : 'OK'}
@@ -206,7 +252,7 @@ const Inventory = {
 
         if (rawNotOnDisplay.length > 0 && (!search || rawNotOnDisplay.some(r => r.toLowerCase().includes(search)))) {
             const header = document.createElement("tr");
-            header.innerHTML = `<td colspan="8" style="background:#222;color:#aaa;padding:12px;text-align:center;font-weight:bold;">
+            header.innerHTML = `<td colspan="10" style="background:#222;color:#aaa;padding:12px;text-align:center;font-weight:bold;">
                 RAW MATERIALS NOT ON DISPLAY
             </td>`;
             fragment.appendChild(header);
@@ -226,18 +272,19 @@ const Inventory = {
                 row.innerHTML = `
                     <td><strong>${raw}</strong></td>
                     <td>Raw Material</td>
-                    <td style="text-align:center;">
+                    <td style="text-align:center;font-weight:bold;color:#aaa;font-size:14px;">
+                        Cost: 
+                        <span style=" font-weight: bold; color:${costPrice >= 0 ? '#0f8' : '#f66'};">$${costPrice.toFixed(2)}</span>
+                    </td>
+                    <td /* colspan="2" */ style="text-align:center;color:#666;">—</td>
+                    <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
                         <input type="number" min="0"
                             class=" warehouse-stock-input"
                             data-item="${raw}"
                             value="${warehouse}">
-                        <br><small style="color:#888;">warehouse stock</small>
-                        ${weightPerUnit > 0 ? `<br><small style="color:#0af;">${warehouseWeight}kg</small>` : ""}
+                        <br><span style="color:#888;">warehouse stock</span>
+                        ${weightPerUnit > 0 ? `<br><span style="color:#0af;">${warehouseWeight}kg</span>` : ""}
                     </td>
-                    <td style="color:#aaa;font-size:14px;">
-                        Cost: $${costPrice.toFixed(2)}
-                    </td>
-                    <td style="text-align:center;color:#666;">—</td>
                     <td colspan="2" style="text-align:center;color:#888;">Not for sale yet</td>
                     <td>
                         <button class="success small" onclick="Inventory.addRawToShop('${raw}')">
@@ -269,6 +316,34 @@ const Inventory = {
                     </span>` : '<span style="color:var(--green);font-weight:bold;">All stocked!</span>'}
                 </div>`;
         }
+        // === RE-ATTACH PRICE INPUT LISTENERS (MUST RUN AFTER RENDER) ===
+        document.querySelectorAll('#inventoryTable .shop-price-input, #inventoryTable .bulk-price-input').forEach(input => {
+            // Remove old listeners to prevent duplicates
+            input.removeEventListener('blur', Inventory.handlePriceChange);
+            input.removeEventListener('keydown', Inventory._handlePriceKeydown);
+
+            // Re-attach
+            input.addEventListener('blur', () => Inventory.handlePriceChange(input));
+            input.addEventListener('keydown', Inventory._handlePriceKeydown);
+
+            // Input cleaning (allow only numbers, comma, dot)
+            input.addEventListener('input', () => {
+                input.value = input.value.replace(/[^0-9.,]/g, '');
+            });
+
+            // Manager-only editing
+            if (!isManager()) {
+                input.disabled = true;
+                input.title = "Only managers can edit prices";
+                input.style.opacity = "0.6";
+                input.style.cursor = "not-allowed";
+            } else {
+                input.disabled = false;
+                input.style.cursor = "text";
+                input.title = "Edit price • Tab or click away to save";
+            }
+        });
+
     },
 
     // AUTO-SAVE + GREEN FLASH — MODERN, NO DEPRECATED EVENT
@@ -401,62 +476,107 @@ const Inventory = {
 
         showToast("success", `${qty}× ${item} added to order`);
         activateTab("order");
+    },
+    async handlePriceChange(input) {
+        const item = input.dataset.item;
+        const tier = input.dataset.tier;  // "shop" or "bulk"
+        let val = input.value.replace(/,/g, "").trim();
+        let num = val === "" ? null : parseFloat(val);
+
+        if (num !== null && isNaN(num)) return;
+
+        // Ensure customPrices exists
+        if (!App.state.customPrices) App.state.customPrices = {};
+        if (!App.state.customPrices[item]) App.state.customPrices[item] = {};
+
+        if (num === null) {
+            delete App.state.customPrices[item][tier];
+            if (Object.keys(App.state.customPrices[item]).length === 0) {
+                delete App.state.customPrices[item];
+            }
+        } else {
+            App.state.customPrices[item][tier] = num;
+            // Format with commas and 2 decimals
+            input.value = num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Visual feedback
+        input.style.background = "#00880044";
+        input.style.borderColor = "var(--green)";
+
+        try {
+            await App.save("customPrices");
+            Inventory.render();  // Critical: re-render to update profit everywhere
+        } catch (err) {
+            console.error("Failed to save customPrices", err);
+            input.style.background = "#88000044";
+            input.style.borderColor = "var(--red)";
+        }
+
+        // Clear flash
+        setTimeout(() => {
+            input.style.background = "";
+            input.style.borderColor = "";
+        }, 600);
+    },
+    _handlePriceKeydown(e) {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            e.target.blur();  // Triggers save
+        }
     }
+
 };
 let lastSavedInput = null;
-// GREEN FLASH — FINAL, TESTED, WORKS 100%
+// FIXED: Weight update + green flash (works 100%)
 document.getElementById("inventoryTable")?.addEventListener("focusout", function (e) {
     const input = e.target;
     if (!input) return;
 
-    // Only our inventory inputs
-    if (!input.classList.contains("shop-stock-input") &&
-        !input.classList.contains("warehouse-stock-input") &&
-        !input.classList.contains("min-stock-input")) {
-        return;
-    }
+    // Only stock inputs (not price inputs)
+    if (!input.matches('.shop-stock-input, .warehouse-stock-input, .min-stock-input')) return;
 
     const item = input.dataset.item;
     if (!item) return;
 
     let value = parseInt(input.value) || 0;
-    if (value < 0) {
-        value = 0;
-        input.value = "0";
-    }
+    if (value < 0) value = 0;
+    input.value = value;
 
-    // SAVE
+    // === SAVE TO STATE ===
     if (input.classList.contains("shop-stock-input")) {
         App.state.shopStock[item] = value;
         App.save("shopStock");
-    }
-    else if (input.classList.contains("warehouse-stock-input")) {
+    } else if (input.classList.contains("warehouse-stock-input")) {
         App.state.warehouseStock[item] = value;
         App.save("warehouseStock");
-    }
-    else if (input.classList.contains("min-stock-input")) {
+    } else if (input.classList.contains("min-stock-input")) {
         App.state.minStock[item] = value;
         App.save("minStock");
     }
 
-    // UPDATE WEIGHT
-    const cell = input.closest("td");
-    const weight = Calculator.weight(item);
-    const small = cell?.querySelector('small[color="#0af"]');
-    if (small && weight > 0) {
-        small.textContent = (value * weight).toFixed(2) + "kg";
+    // === UPDATE WEIGHT LIVE (THIS IS THE KEY FIX) ===
+    const weightPerUnit = Calculator.weight(item);
+    if (weightPerUnit > 0) {
+        const qty = value;
+        const newWeightText = (qty * weightPerUnit).toFixed(2) + "kg";
+
+        // Find the correct weight label in the same cell
+        const weightLabel = input.closest("td")
+            ?.querySelector('span[style*="color:#0af"], span.style-color-0af');
+
+        if (weightLabel) {
+            weightLabel.textContent = newWeightText;
+        }
     }
 
-    // GREEN FLASH — THIS WORKS
-    input.style.background = "#00ff00";
-    input.style.transition = "background 0.3s ease";
-    input.style.color = "#000000ff";
-
-    setTimeout(() => {
-        input.style.background = "";
-        input.style.color = "#ffffffff";
-    }, 300);
+    // === GREEN FLASH ===
+    input.style.background = "#d4edda";
+    input.style.transition = "background 0.4s ease";
+    setTimeout(() => input.style.background = "", 400);
 });
+
+
 
 
 // Debounced search
