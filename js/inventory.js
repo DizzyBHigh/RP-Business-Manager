@@ -583,7 +583,7 @@ document.getElementById("inventoryTable")?.addEventListener("focusout", function
     }
 
     // === GREEN FLASH ===
-    input.style.background = "#d4edda";
+    input.style.background = "#10da3fff";
     input.style.transition = "background 0.4s ease";
     setTimeout(() => input.style.background = "", 400);
 });
