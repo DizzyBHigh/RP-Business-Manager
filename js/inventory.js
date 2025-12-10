@@ -53,6 +53,8 @@ const Inventory = {
 
             const profit = shopPrice - costPrice;
             const bulkProfit = bulkPrice - costPrice;
+            const sMargin = shop !== null && costPrice ? ((profit / costPrice) * 100) : 0;
+            const bMargin = bulkProfit !== null && costPrice ? ((bulkProfit / costPrice) * 100) : 0;
 
             const addBtn = needed > 0 ? `
                 <button class="success small" style="margin-bottom:4px;" onclick="Inventory.addToOrder('${item}', ${needed})">
@@ -80,8 +82,10 @@ const Inventory = {
                         <span style=" font-weight: bold; color:${profit >= 0 ? '#0f8' : '#f66'};">
                             <br>
                             <span style="font-weight: bold;color:#0e95d4;">Profit (shop):</span> 
-                            <span style=" font-weight: bold; color:${profit >= 0 ? '#0f8' : '#f66'};">$${profit.toFixed(2)}
-                        </span>   
+                            <span style=" font-weight: bold; color:${profit >= 0 ? '#0f8' : '#f66'};">$${profit.toFixed(2)}</span>
+                            <br>
+                            <span style="font-weight: bold;color:#0e95d4;">margin:</span>
+                            <span style="font-weight:bold;color:${sMargin >= 0 ? '#0f8' : '#f66'};">${sMargin.toFixed(2)}%</span>   
                 </td>
                 <td style="text-align:center; font-size:14px;">
                 <span style="font-weight:bold;color:#ee940e;">Raw Cost: </span>
@@ -93,7 +97,9 @@ const Inventory = {
                         <span style="font-weight: bold;color:#f0ec0f;">Profit (bulk):</span>
                         <span style="font-weight:bold;color:${profit >= 0 ? '#0f8' : '#f66'};">
                          $${bulkProfit.toFixed(2)}
-                    </span>
+                    </span><br>
+                    <span style="font-weight: bold;color:#f0ec0f;">margin:</span>
+                        <span style="font-weight:bold;color:${bMargin >= 0 ? '#0f8' : '#f66'};">${bMargin.toFixed(2)}%</span>
                 </td>
                 <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
                 <span style="color:#888;">Warehouse Stock</span><br>
@@ -163,7 +169,10 @@ const Inventory = {
                 const shopPrice = Number(customPrices[raw]?.shop) || costPrice * 1.25;
                 const bulkPrice = Number(customPrices[raw]?.bulk) || 0;
                 const profit = shopPrice - costPrice;
+                const bulkProfit = bulkPrice - costPrice;
 
+                const sMargin = shopPrice !== null && costPrice ? ((profit / costPrice) * 100) : 0;
+                const bMargin = bulkProfit !== null && costPrice ? ((bulkProfit / costPrice) * 100) : 0;
                 const addBtn = needed > 0 ? `
                     <button class="success small" style="margin-bottom:4px;" onclick="Inventory.addToOrder('${raw}', ${needed})">
                         +${needed} to Order
@@ -190,19 +199,22 @@ const Inventory = {
                             
                             <br>
                             <span style="font-weight: bold;color:#0e95d4;">Profit (shop):</span>
-                            <span style="font-weight:bold;color:${profit >= 0 ? '#0f8' : '#f66'};">$${profit.toFixed(2)}</span>
-                        
+                            <span style="font-weight:bold;color:${profit >= 0 ? '#0f8' : '#f66'};">$${profit.toFixed(2)}</span><br>
+                            <span style="font-weight: bold;color:#0e95d4;">margin:</span>
+                            <span style="font-weight:bold;color:${sMargin >= 0 ? '#0f8' : '#f66'};">${sMargin.toFixed(2)}%</span>
                     </td>
                     <td style="text-align:center; font-size:14px;">
                     <span style="font-weight:bold;color:#ee940e;">Raw Cost: </span>
                     <span style="color:${costPrice >= 0 ? '#0f8' : '#f66'};font-weight:bold;">$${costPrice.toFixed(2)}</span><br>
                         <input type="number" class="bulk-price-input" data-item="${raw}" data-tier="bulk"
-                            value="${(customPrices[raw]?.bulk ?? costPrice * 1.10).toFixed(2)}" style="width:82px; text-align:center;"
-                            placeholder="${(costPrice * 1.10).toFixed(2)}">
+                            value="${(customPrices[raw]?.bulk ?? costPrice).toFixed(2)}" style="width:82px; text-align:center;"
+                            placeholder="${(costPrice).toFixed(2)}">
                         <br>
                         <span style="font-weight: bold;color:#f0ec0f;">Profit (bulk):</span>
-                            <span style="font-weight:bold;color:${profit >= 0 ? '#0f8' : '#f66'};">$${profit.toFixed(2)}</span>
-                        
+                        <span style="font-weight:bold;color:${bulkProfit >= 0 ? '#0f8' : '#f66'};">$${bulkProfit.toFixed(2)}</span>
+                        <br>
+                        <span style="font-weight: bold;color:#f0ec0f;">margin:</span>
+                        <span style="font-weight:bold;color:${bMargin >= 0 ? '#0f8' : '#f66'};">${bMargin.toFixed(2)}%</span>
                     </td>
                     <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
                         <span style="color:#888;">Warehouse Stock</span><br>
