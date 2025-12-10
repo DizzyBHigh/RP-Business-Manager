@@ -172,7 +172,7 @@ const Inventory = {
                 const bulkProfit = bulkPrice - costPrice;
 
                 const sMargin = shopPrice !== null && costPrice ? ((profit / costPrice) * 100) : 0;
-                const bMargin = bulkProfit !== null && costPrice ? ((bulkProfit / costPrice) * 100) : 0;
+                const bMargin = bulkPrice !== null && costPrice ? ((bulkProfit / costPrice) * 100) : 0;
                 const addBtn = needed > 0 ? `
                     <button class="success small" style="margin-bottom:4px;" onclick="Inventory.addToOrder('${raw}', ${needed})">
                         +${needed} to Order
