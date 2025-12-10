@@ -840,7 +840,7 @@ const App = {
             Order.autoRestoreCheckedOutOrder();
             Inventory.render();
             Ledger.render();
-            PriceList.render();
+            //PriceList.render();
             Categories.render();
             EmployeeManager.render();
             RawMaterials.renderPrices();
@@ -1471,7 +1471,7 @@ const DropdownMenu = {
                 }
             ]
         },
-        "Stock and Raw Materials": {
+        "Raw Materials, Recipes and Stock Manager": {
             description: "Track inventory, purchase raw materials, and manage warehouse stock levels",
             tabs: [
                 {
@@ -1489,7 +1489,7 @@ const DropdownMenu = {
             `.trim()
                 },
                 {
-                    id: "rawpurchase", name: "Purchase Raw", desc: "Record new raw material deliveries to warehouse", help: `
+                    id: "rawpurchase", name: "Purchase Stock", desc: "Record new raw material deliveries to warehouse", help: `
               <p><strong>Stock and Raw Materials Section - Purchase Raw Materials</strong></p>
               <p>When you add raw materials to your business warehouse</p>
               <p>fill out this form to maintain correct stock levels and ledger.</p>
@@ -1501,6 +1501,30 @@ const DropdownMenu = {
               <li>select your name from the employee list</li>
               </ul>
               <p><em>If you are adding materials you have collected yourself, it is still best to use this form and put in 0 as the buy cost.</em><br /><br />Click R<strong>ecord purchase &amp; Add to Warehouse</strong>.<br /><br />A confirmation will appear with the purchase detials<br />click <strong>OK<br /></strong><br />A record of the purchase will be added to the Ledger and the warehouse stock will be updated.</p>
+              <p>&nbsp;</p>
+            `.trim()
+                },
+                {
+                    id: "recipes", name: "Recipe Manager", desc: "Create, edit and delete crafting recipes", help: `
+              <p><strong>Craftable Products Section - Recipe Manager</strong></p>
+              <p>The recipe Manager is where you add all your craftable products.<br /><br />Recipes can be created from Raw Materilas, Other Recipies or Both.<br /><br />Creating a recipe is simple:</p>
+              <ul>
+              <li><strong>Name</strong> - The name of the item</li>
+              <li><strong>Yield per Craft</strong> - how many items this recipe creates</li>
+              <li><strong>Weight</strong> - The weight of the final crafted item (for 1 single item)</li>
+              <li><strong>Ingredients</strong> - The ingredients used to make the Item</li>
+              <li>Click <strong>Add Ingerident</strong>&nbsp;to add a new item to the recipe<br />You can add as many ingredients as you need
+              <ul style="list-style-type: square;">
+              <li>An Ingredient can be:
+              <ul style="list-style-type: circle;">
+              <li>A Raw Material</li>
+              <li>A Recipe you previously created.</li>
+              </ul>
+              </li>
+              </ul>
+              </li>
+              </ul>
+              <p>Click <strong>Create Recipe&nbsp;</strong>and your new product will appear i the list below.<br /><br />To Edit an existing recipe, click the <strong>Load</strong> Button.<br /><br />It will appear in the recipe Editor.<br />You can change the Weight, Name, Yeild and Ingredients then click <strong>Save Changes</strong>.<br /><br />You can Duplicate an existing recipe, after clicking <strong>Duplicate Recipe</strong><br />The new recipe will appear in the top Create new Recipe Area.<br />Just Give it a new name update the ingredients and click <strong>Create Recipe</strong></p>
               <p>&nbsp;</p>
             `.trim()
                 },
@@ -1533,7 +1557,7 @@ const DropdownMenu = {
                 }
             ]
         },
-        "Craftable Products": {
+        /* "Craftable Products": {
             description: "Create and edit crafting recipes, organize items into categories",
             tabs: [
                 {
@@ -1586,7 +1610,7 @@ const DropdownMenu = {
             `.trim()
                 }
             ]
-        },
+        }, */
         "Shop": {
             description: "Monitor shop sales, daily revenue, and manage product pricing",
             tabs: [

@@ -294,7 +294,7 @@ function removeOrderItemDirectly(index) {
 function refreshAllStockLists() {
     setTimeout(() => {
         // Also refresh these no matter what (they use allItems() internally)
-        PriceList.render();
+        //PriceList.render();
         Order.render();
         Inventory.render();
     }, 100);

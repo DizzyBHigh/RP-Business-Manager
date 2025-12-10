@@ -264,7 +264,7 @@ const RawMaterials = {
         await App.save("rawPrice");
         this.renderPrices();
         debouncedCalcRun();
-        PriceList.render();
+        //PriceList.render();
         Inventory.render();
 
         showToast("success", `"${name}" removed.`);
