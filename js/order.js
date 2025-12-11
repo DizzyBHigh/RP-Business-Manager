@@ -448,10 +448,15 @@ const Order = {
             totalNet += net;
             totalWeight += weight;
 
-            const displayWeight = weight > 0 ? weight.toFixed(1) + "kg" :
+            /* const displayWeight = weight > 0 ? weight.toFixed(1) + "kg" :
                 (o.items || []).reduce((s, i) => s + (i.qty || 1) * (Calculator.weight(i.item) || 0), 0).toFixed(1);
-            const weightText = displayWeight > 0 ? displayWeight + "kg" : "—";
+            const weightText = displayWeight > 0 ? displayWeight + "kg" : "—"; */
 
+            // FIXED WEIGHT DISPLAY — handles string from .toFixed()
+            const savedWeight = parseFloat(o.totalWeight || 0);
+            const weightText = savedWeight > 0 ? savedWeight.toFixed(1) + "kg" : "—";
+
+            totalWeight += savedWeight;  // also fix the summary total
             return `<tr>
                         <td>${o.date}</td>
                         <td><code>${o.id}</code></td>
