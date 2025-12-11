@@ -268,13 +268,13 @@ const Calculator = {
 
                 <!-- Left side: Cost & Profit (only visible internally) -->
                 <div class="profit-only" style="margin-right:auto; text-align:left; color:#aaa;">
-                    <div><strong>Cost to Produce:</strong> $${grandCost.toFixed(2)}</div>
+                    <div><strong>Cost to Produce:</strong> <span id="costToProduce"> $${grandCost.toFixed(2)}</span></div>
                     <div id="profitLine" style="color:#0f8; font-size:19px;">
                         PROFIT: 
                         <span id="profitAmount" class="${profitClass}">
                             ${profitSign}$${Math.abs(profit).toFixed(2)}
                         </span>
-                        <span style="color:#0af;">($${profitPct}%)</span>
+                        <span id="profitPercent" style="color:#0af;">($${profitPct}%)</span>
                     </div>
                 </div>
 

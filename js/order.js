@@ -117,6 +117,7 @@ const Order = {
         document.getElementById("newQty").value = 1;
         this.renderCurrentOrder();
         debouncedCalcRun();
+        updateProfitDisplay();
     },
 
     updateQty(idx, qty) {
@@ -126,6 +127,7 @@ const Order = {
         debouncedSaveOrder();;
         this.renderCurrentOrder();
         debouncedCalcRun();
+        updateProfitDisplay();
     },
 
     updateTier(idx, tier) {
@@ -134,6 +136,7 @@ const Order = {
         debouncedSaveOrder();;
         this.renderCurrentOrder();
         debouncedCalcRun();
+        updateProfitDisplay();
     },
 
     updatePrice(idx, price) {
@@ -145,6 +148,7 @@ const Order = {
         debouncedSaveOrder();;
         this.renderCurrentOrder();
         debouncedCalcRun();
+        updateProfitDisplay();
     },
 
     remove(idx) {
@@ -152,6 +156,7 @@ const Order = {
         debouncedSaveOrder();;
         this.renderCurrentOrder();
         debouncedCalcRun();
+        updateProfitDisplay();
     },
 
     async clear() {
@@ -220,6 +225,7 @@ const Order = {
         // 6. Final UI refresh
         Order.renderCurrentOrder();  // ← This now clears profit display too
         debouncedCalcRun();
+        updateProfitDisplay();
         Inventory.render();
 
         showToast("success", Order.mode === "shop" || Order.mode === "warehouse" ? "Restock order cleared" : "Order cleared permanently");
@@ -398,6 +404,7 @@ const Order = {
 
             Order.renderCurrentOrder();
             debouncedCalcRun();
+            updateProfitDisplay();
             Inventory.render();
             Ledger.render();
             Order.renderPending();
@@ -631,6 +638,7 @@ const Order = {
         debouncedSaveOrder();;
         this.renderCurrentOrder();
         debouncedCalcRun();
+        updateProfitDisplay();
 
         showToast("success", `Added ${low.length} items to Warehouse Restock order`);
     },
@@ -704,6 +712,7 @@ const Order = {
         // Re-render table to hide price/tier in restock modes
         this.renderCurrentOrder();
         debouncedCalcRun();
+        updateProfitDisplay();
     },
 
     // ──────────────────────────────────────────────────────────────
@@ -817,6 +826,7 @@ const Order = {
         debouncedSaveOrder();
         Order.renderCurrentOrder();
         debouncedCalcRun();
+        updateProfitDisplay();
 
         Order.showLoadedPendingBanner(order, currentUser);
         activateTab("order");
@@ -1048,6 +1058,7 @@ const Order = {
         // Final render
         Order.renderCurrentOrder();
         debouncedCalcRun();
+        updateProfitDisplay();
     },
 
     // Show banner when a pending order is loaded
@@ -1128,6 +1139,7 @@ const Order = {
         debouncedSaveOrder();
         Order.renderCurrentOrder();
         debouncedCalcRun();
+        updateProfitDisplay();
         Order.renderPending();
 
         showToast("success", "Order returned to pending list");
@@ -1152,6 +1164,45 @@ const Order = {
     }
 };
 
+
+function updateProfitDisplay() {
+    const items = App.state.order || [];
+    let totalCost = 0;
+    let totalSale = 0;
+
+    if (items.length > 0) {
+        items.forEach(function (o) {
+            const cost = Calculator.cost(o.item);
+            const price = o.customPrice !== undefined ? o.customPrice :
+                (App.state.customPrices && App.state.customPrices[o.item] && App.state.customPrices[o.item][o.tier]) ||
+                cost * (o.tier === "bulk" ? 1.10 : 1.25);
+
+            totalCost += cost * o.qty;
+            totalSale += price * o.qty;
+        });
+    }
+
+    const profit = totalSale - totalCost;
+    const profitPercent = totalSale > 0 ? (profit / totalSale) * 100 : 0;
+
+    // SAFE DOM UPDATES — NO OPTIONAL CHAINING, NO SYNTAX ERRORS
+    const costEl = document.getElementById("costToProduce");
+    if (costEl) costEl.textContent = "$" + totalCost.toFixed(2);
+
+    const profitEl = document.getElementById("profitAmount");
+    if (profitEl) {
+        profitEl.textContent = "$" + profit.toFixed(2);
+        profitEl.style.color = profit >= 0 ? "#0f8" : "#f66";
+        profitEl.className = profit >= 0 ? "profit-positive" : "profit-negative";
+    }
+
+    const percentEl = document.getElementById("profitPercent");
+    if (percentEl) percentEl.textContent = profitPercent.toFixed(1) + "%";
+
+    const totalEl = document.getElementById("grandTotal");
+    if (totalEl) totalEl.textContent = "$" + totalSale.toFixed(2);
+}
+
 // Populate employee dropdown + restore saved values
 function initOrderPage() {
 
@@ -1170,6 +1221,7 @@ function initOrderPage() {
         Order.renderCurrentOrder();
     }
     debouncedCalcRun();
+    updateProfitDisplay();
 }
 
 // ========================
