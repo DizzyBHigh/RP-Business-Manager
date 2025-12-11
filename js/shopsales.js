@@ -128,12 +128,26 @@ function importFromTextarea() {
         map[s.item].total += s.total;
     });
 
-    const finalItems = Object.keys(map).map(item => ({
-        item,
-        qty: map[item].qty,
-        total: map[item].total,
-        unitPrice: (map[item].total / map[item].qty).toFixed(2)
-    }));
+    const finalItems = Object.keys(map).map(item => {
+        const qty = map[item].qty;
+        const total = map[item].total;
+        const unitPrice = total / qty;
+
+        // KEEP costPerUnit — it's valuable!
+        const costPerUnit = Calculator.cost(item) || 0;
+        const totalCost = costPerUnit * qty;
+        const profit = total - totalCost;
+
+        return {
+            item,
+            qty,
+            total,
+            unitPrice: unitPrice.toFixed(2),
+            costPerUnit: costPerUnit.toFixed(2),     // Kept!
+            totalCost: totalCost.toFixed(2),         // Kept!
+            profit: profit.toFixed(2)                // Main thing we want
+        };
+    });
 
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10);
@@ -143,11 +157,19 @@ function importFromTextarea() {
     const batchId = `SHOP-${dateStr.replace(/-/g, '').slice(2)}-${timeStr}`;
 
     const grandTotal = finalItems.reduce((a, b) => a + b.total, 0);
+    // Get current tax rate
+    const taxRate = App.state.shopTaxRate || 0.08;
+    const grandTax = grandTotal * taxRate;
+    const grandNet = grandTotal - grandTax;
+    const grandProfit = finalItems.reduce((a, b) => a + parseFloat(b.profit), 0);
 
     // Create ONE ledger entry per item type
     finalItems.forEach((s, index) => {
+        const itemTax = s.total * taxRate;
+        const itemNet = s.total - itemTax;
+
         const record = {
-            id: `${batchId}-${String(index + 1).padStart(3, '0')}`,  // e.g. SHOP-251124-143512-001
+            id: `${batchId}-${String(index + 1).padStart(3, '0')}`,
             batchId: batchId,
             date: dateStr,
             time: today.toTimeString().slice(0, 8),
@@ -155,10 +177,13 @@ function importFromTextarea() {
             item: s.item,
             qty: s.qty,
             unitPrice: parseFloat(s.unitPrice),
-            total: s.total,
-            amount: s.total,
+            total: s.total,           // Gross
+            amount: itemNet,          // Net cash received
+            taxAmount: itemTax,       // Tax paid
+            taxRate: taxRate,         // Rate at time of sale
+            profit: parseFloat(s.profit),
             employee: "Auto-Import",
-            description: `${s.item} × ${s.qty} sold`
+            description: `${s.item} × ${s.qty} sold — Profit: $${s.profit} | Tax: $${itemTax.toFixed(2)}`
         };
         App.state.ledger.push(record);
     });
@@ -174,7 +199,8 @@ function importFromTextarea() {
 
     Inventory.render();
     Ledger.render();
-    showTodaySales({ items: finalItems, totalSale: grandTotal, date: dateStr, batchId });
+    showTodaySales({ items: finalItems, totalSale: grandTotal, totalProfit: grandTotal - finalItems.reduce((a, b) => a + (b.costPerUnit * b.qty), 0), date: dateStr, batchId });
+    ShopSales.render();
 }
 
 // Initialise Corrections
@@ -373,36 +399,137 @@ loadCorrections();
 // ========================
 const ShopSales = {
     render() {
-        const from = document.getElementById("shopSalesFrom")?.value || "";
-        const to = document.getElementById("shopSalesTo")?.value || "";
-        const table = document.getElementById("shopSalesTable");
-        let total = 0;
+        const tbody = document.getElementById('shopSalesTable');
+        if (!tbody) return;
 
-        const sales = App.state.ledger
-            .filter(e => e.type === "shop_sale_item")
-            .filter(e => (!from || e.date >= from) && (!to || e.date <= to))
-            .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
-
-        if (sales.length === 0) {
-            table.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#888; padding:40px;">No sales recorded yet</td></tr>`;
-            document.getElementById("shopTotalRevenue").textContent = "$0.00";
+        // Safety first — wait for App to be ready
+        if (typeof App === 'undefined' || !App.state || !App.state.ledger) {
+            // Try again in 200ms
+            setTimeout(() => ShopSales.render?.(), 200);
             return;
         }
+        const sales = (App.state.ledger)
+            .filter(r => r.type === "shop_sale_item")
+            .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(b.time));
 
-        table.innerHTML = sales.map(s => {
-            total += s.amount;
-            return `<tr>
-        <td><strong>${s.date}</strong><br><small>${s.time}</small></td>
-        <td><code>${s.id}</code></td>
-        <td><strong>${s.item}</strong></td>
-        <td style="text-align:center; font-weight:bold;">${s.qty}</td>
-        <td>$${parseFloat(s.unitPrice).toFixed(2)}</td>
-        <td style="color:var(--green); font-weight:bold;">$${s.amount.toFixed(2)}</td>
-        <td><small>Auto-Import</small></td>
-      </tr>`;
-        }).join("");
 
-        document.getElementById("shopTotalRevenue").textContent = "$" + total.toFixed(2);
+        // Default fallback
+        // Default fallback
+        const defaultRate = 0.08;
+        const savedRate = App.state.shopTaxRate ?? defaultRate;
+        const percent = (savedRate * 100).toFixed(2);
+
+        const input = document.getElementById('shopTaxRateInput');
+        const display = document.getElementById('currentTaxDisplay');
+
+        if (input) {
+            input.value = percent;  // ← THIS WAS MISSING OR NOT WORKING
+        }
+        if (display) {
+            display.textContent = percent + '%';
+        }
+
+        console.log("Tax rate initialized:", savedRate, "→", percent + "%");
+
+        let html = '';
+        let currentBatch = null;
+        let batchGross = 0;
+        let batchTax = 0;
+        let batchNet = 0;
+        let batchProfit = 0;
+        let batchCost = 0;
+
+        sales.forEach(r => {
+            const costPerUnit = parseFloat(r.costPerUnit) || Calculator.cost(r.item) || 0;
+            const profit = parseFloat(r.profit) || (r.total - (costPerUnit * r.qty));
+            const taxRate = r.taxRate || App.state.shopTaxRate || 0.08;
+            const taxAmount = r.taxAmount || (r.total * taxRate);
+            const netAmount = r.amount || (r.total - taxAmount);
+            const netProfitAfterTax = profit - taxAmount;
+            // Batch grouping
+            if (currentBatch !== r.batchId) {
+                if (currentBatch !== null) {
+                    // Batch summary row
+                    html += `
+                    <tr style="background:#222; font-weight:bold;">
+                        <td colspan="5" style="text-align:right; color:#aaa;">Batch Total:</td>
+                        <td style="text-align:right; color:var(--green);">${batchGross.toFixed(2)}</td>
+                        <td style="text-align:right; color:#888;">${batchCost.toFixed(2)}</td>
+                        <td style="text-align:right; color:${batchProfit >= 0 ? '#0f8' : '#f66'};">
+                            $${batchProfit.toFixed(2)}
+                        </td>
+                        <td style="text-align:right; color:#ff9800;">$${batchTax.toFixed(2)}</td>
+                        <td style="text-align:right; color:#0af;">$${batchNet.toFixed(2)}</td>
+                        <td></td>
+                    </tr>
+                    </tbody></table>
+                `;
+                }
+
+                currentBatch = r.batchId;
+                batchGross = batchTax = batchNet = batchProfit = batchCost = 0;
+
+                html += `
+                <div style="margin:20px 0 10px; padding:8px; background:var(--accent); color:white; border-radius:6px; font-weight:bold;">
+                    Batch: ${r.batchId} — ${r.date} ${r.time}
+                </div>
+                <table style="width:100%; border-collapse:collapse;">
+                <tbody>
+            `;
+            }
+
+            batchGross += r.total;
+            batchTax += taxAmount;
+            batchNet += netAmount;
+            batchProfit += profit;
+            batchCost += costPerUnit * r.qty;
+
+            html += `
+            <tr style="border-bottom:1px solid #333;">
+                <td style="font-size:13px; color:#888;">${r.date}<br>${r.time}</td>
+                <td style="font-family:monospace; font-size:12px;">${r.id}</td>
+                <td><strong>${r.item}</strong></td>
+                <td style="text-align:center;">${r.qty}</td>
+                <td style="text-align:right;">$${parseFloat(r.unitPrice || 0).toFixed(2)}</td>
+                <td style="text-align:right; color:var(--green); font-weight:bold;">
+                    $${r.total.toFixed(2)}
+                </td>
+                <td style="text-align:right; color:#888;">
+                    $${costPerUnit.toFixed(2)}
+                </td>
+                <td style="text-align:right; color:${profit >= 0 ? '#0f8' : '#f66'}; font-weight:bold;">
+                    $${profit.toFixed(2)}
+                </td>
+                <td style="text-align:right; color:#ff9800;">
+                    $${taxAmount.toFixed(2)}
+                </td>
+                <td style="text-align:right; color:#0af; font-weight:bold;">
+                    $${netProfitAfterTax.toFixed(2)}
+                </td>
+                <td style="text-align:center; color:#0af;">Shop Sale</td>
+            </tr>
+        `;
+        });
+
+        // Final batch summary
+        if (currentBatch !== null) {
+            html += `
+            <tr style="background:#222; font-weight:bold;">
+                <td colspan="5" style="text-align:right; color:#aaa;">Batch Total:</td>
+                <td style="text-align:right; color:var(--green);">${batchGross.toFixed(2)}</td>
+                <td style="text-align:right; color:#888;">${batchCost.toFixed(2)}</td>
+                <td style="text-align:right; color:${batchProfit >= 0 ? '#0f8' : '#f66'};">
+                    $${batchProfit.toFixed(2)}
+                </td>
+                <td style="text-align:right; color:#ff9800;">$${batchTax.toFixed(2)}</td>
+                <td style="text-align:right; color:#0af;">$${(batchProfit - batchTax).toFixed(2)}</td>
+                <td></td>
+            </tr>
+            </tbody></table>
+        `;
+        }
+
+        tbody.innerHTML = html || '<tr><td colspan="11" style="text-align:center; color:#888; padding:50px;">No sales recorded yet</td></tr>';
     },
 
     viewDetail(id) {
@@ -417,6 +544,36 @@ const ShopSales = {
                 Unit Price: $${parseFloat(sale.unitPrice).toFixed(2)}
                 Total: $${sale.amount.toFixed(2)}
                 Auto-imported`);
+    },
+    initTax() {
+        const rate = (App.state.shopTaxRate || 0.08) * 100;
+        const input = document.getElementById('shopTaxRateInput');
+        const display = document.getElementById('currentTaxDisplay');
+        if (input) input.value = rate.toFixed(2);
+        if (display) display.textContent = rate.toFixed(2) + '%';
+    },
+
+    async saveTaxRate() {
+        const input = document.getElementById('shopTaxRateInput');
+        if (!input) return;
+
+        let rate = parseFloat(input.value) || 0;
+        if (rate < 0) rate = 0;
+        if (rate > 100) rate = 100;
+
+        const decimalRate = rate / 100;
+        App.state.shopTaxRate = decimalRate;
+
+        try {
+            await App.save("shopTaxRate");  // ← NOW AWAIT IT
+            document.getElementById('currentTaxDisplay').textContent = rate.toFixed(2) + '%';
+            showToast("success", `Tax rate saved: ${rate.toFixed(2)}%`);
+            ShopSales.initTax?.();  // refresh display just in case
+        } catch (err) {
+            showToast("fail", "Tax rate NOT saved — check internet");
+            // Optional: revert input
+            input.value = (App.state.shopTaxRate * 100).toFixed(2);
+        }
     }
 };
 
@@ -427,83 +584,230 @@ function showTodaySales(importRecord) {
     const itemsEl = document.getElementById('todayItems');
     const summary = document.getElementById('todaySalesSummary');
 
+    const now = new Date();
+    const dateTime = now.toLocaleString();
+
     let html = '';
     let grandTotal = 0;
-    importRecord.items.forEach(s => {
-        html += `<tr><td><strong>${s.item}</strong></td><td style="text-align:center;">${s.qty}</td><td style="text-align:right; color:var(--green); font-weight:bold;">$${s.total.toFixed(2)}</td></tr>`;
+    let grandProfit = 0;
+    let grandCost = 0;
+
+    importRecord.items.forEach((s, index) => {
+        const costPerUnit = parseFloat(s.costPerUnit) || 0;
+        const profit = parseFloat(s.profit) || 0;
+        const unitPrice = parseFloat(s.unitPrice);
+
+        // Use batchId + index as visible ID (matches ledger)
+        const displayId = importRecord.batchId + '-' + String(index + 1).padStart(3, '0');
+
+        html += `<tr>
+                    <td style="font-size:13px; color:#888;">${dateTime}</td>
+                    <td style="font-family:monospace; font-size:12px;">${displayId}</td>
+                    <td><strong>${s.item}</strong></td>
+                    <td style="text-align:center;">${s.qty}</td>
+                    <td style="text-align:right;">$${unitPrice.toFixed(2)}</td>
+                    <td style="text-align:right; color:var(--green); font-weight:bold;">$${s.total.toFixed(2)}</td>
+                    <td style="text-align:right; color:#888;">$${costPerUnit.toFixed(2)}</td>
+                    <td style="text-align:right; color:${profit >= 0 ? '#0f8' : '#f66'}; font-weight:bold;">
+                        $${profit.toFixed(2)}
+                    </td>
+                    <td style="text-align:center; color:#0af;">Auto-Import</td>
+                </tr>`;
+
         grandTotal += s.total;
+        grandProfit += profit;
+        grandCost += costPerUnit * s.qty;
     });
 
     table.innerHTML = html;
     totalEl.textContent = '$' + grandTotal.toFixed(2);
     itemsEl.textContent = importRecord.items.length;
-    summary.innerHTML = `Total: <span style="color:var(--green)">$${grandTotal.toFixed(2)}</span> across ${importRecord.items.length} different items`;
+
+    summary.innerHTML = `
+        Gross: <span style="color:var(--green)">$${grandTotal.toFixed(2)}</span> | 
+        Tax (${(taxRate * 100).toFixed(1)}%): <span style="color:#ff9800;">$${grandTax.toFixed(2)}</span> | 
+        <strong style="color:#0af;">Net Cash: $${grandNet.toFixed(2)}</strong> | 
+        Profit: <span style="color:${grandProfit >= 0 ? '#0f8' : '#f66'}">$${grandProfit.toFixed(2)}</span>
+        across ${importRecord.items.length} items
+    `;
 
     container.style.display = 'block';
     container.scrollIntoView({ behavior: 'smooth' });
 }
+
 // =============================================
-// AUTO-REFRESH SHOP SALES — BULLETPROOF
+// TOTAL REVENUE SUMMARY — FINAL & GUARANTEED TO WORK
 // =============================================
-function refreshShopSales() {
-    if (document.getElementById("shopSalesTable")) {
-        ShopSales?.render?.();
+function updateShopRevenueSummary() {
+    const div = document.getElementById('shopTotalRevenue');
+    if (!div) return;
+
+    const sales = (App.state.ledger || [])
+        .filter(r => r.type === "shop_sale_item");
+
+    if (sales.length === 0) {
+        div.innerHTML = `<div style="text-align:center; padding:40px; color:#888; font-size:18px;">No sales recorded yet</div>`;
+        return;
     }
 
-    const todayPanel = document.getElementById("todaySalesDisplay");
-    if (todayPanel && todayPanel.style.display !== "none") {
-        const today = new Date().toISOString().slice(0, 10);
-        const todaySales = (App.state.ledger || [])
-            .filter(e => e.type === "shop_sale_item" && e.date === today)
-            .reduce((acc, s) => {
-                const existing = acc.find(x => x.item === s.item);
-                if (existing) {
-                    existing.qty += s.qty;
-                    existing.total += s.amount;
-                } else {
-                    acc.push({ item: s.item, qty: s.qty, total: s.amount });
-                }
-                return acc;
-            }, []);
+    let totalGross = 0;
+    let totalTax = 0;
+    let totalProfitBeforeTax = 0;
 
-        if (todaySales.length > 0) {
-            let html = '';
-            let grandTotal = 0;
-            todaySales.forEach(s => {
-                html += `<tr><td><strong>${s.item}</strong></td><td style="text-align:center;">${s.qty}</td><td style="text-align:right; color:var(--green); font-weight:bold;">$${s.total.toFixed(2)}</td></tr>`;
-                grandTotal += s.total;
-            });
-            document.getElementById("todaySalesTable").innerHTML = html;
-            document.getElementById("todayTotal").textContent = "$" + grandTotal.toFixed(2);
-            document.getElementById("todayItems").textContent = todaySales.length;
-            document.getElementById("todaySalesSummary").innerHTML = `Total: <span style="color:var(--green)">$${grandTotal.toFixed(2)}</span> across ${todaySales.length} items`;
-        }
-    }
+    sales.forEach(r => {
+        const gross = r.total || 0;
+        const tax = r.taxAmount || (gross * (r.taxRate || App.state.shopTaxRate || 0.08));
+        const profitBeforeTax = parseFloat(r.profit) || 0;
+
+        totalGross += gross;
+        totalTax += tax;
+        totalProfitBeforeTax += profitBeforeTax;
+    });
+
+    const netProfitAfterTax = totalProfitBeforeTax - totalTax;
+
+    div.innerHTML = `
+        <div style="background:var(--card); padding:5px; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+            <h3 style="margin:0 0 5px 0; color:var(--accent); font-size:22px; text-align:center;">Total Shop Revenue</h3>
+            <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
+                <div style="background:#111; padding:16px; border-radius:10px; border:2px solid; border-color:var(--green);text-align:center; min-width:140px; flex:1;">
+                    <div style="color:#888; font-size:13px;">Gross Sales</div>
+                    <div style="font-size:24px; font-weight:bold; color:var(--green); margin-top:4px;">
+                        $${totalGross.toFixed(2)}
+                    </div>
+                </div>
+                <div style="background:#111; padding:16px; border-radius:10px; text-align:center; min-width:140px; flex:1; border:2px solid #0f8;">
+                    <div style="color:#888; font-size:13px;">Total Profit (Before Tax)</div>
+                    <div style="font-size:24px; font-weight:bold; color:#0f8; margin-top:4px;">
+                        $${totalProfitBeforeTax.toFixed(2)}
+                    </div>
+                </div>
+                <div style="background:#111; padding:16px; border-radius:10px; border:2px solid; border-color:#ff9800; text-align:center; min-width:140px; flex:1;">
+                    <div style="color:#888; font-size:13px;">Tax Paid</div>
+                    <div style="font-size:24px; font-weight:bold; color:#ff9800; margin-top:4px;">
+                        $${totalTax.toFixed(2)}
+                    </div>
+                </div>
+                <div style="background:#111; padding:16px; border-radius:10px; text-align:center; min-width:140px; flex:1; border:2px solid #0af;">
+                    <div style="color:#888; font-size:13px;">Net Profit (After Tax)</div>
+                    <div style="font-size:24px; font-weight:bold; color:#0af; margin-top:4px;">
+                        $${netProfitAfterTax.toFixed(2)}
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:16px; color:#888; font-size:14px; text-align:center;">
+                Based on <strong>${sales.length}</strong> sale${sales.length === 1 ? '' : 's'} across all time
+            </div>
+        </div>
+    `;
 }
 
-// Auto-refresh when Shop Sales tab is opened
-document.getElementById("sectionTabs")?.addEventListener("click", e => {
-    const tab = e.target.closest(".horizontal-tab");
-    if (tab?.dataset.tab === "shopsales") {
-        setTimeout(refreshShopSales, 150);
+/* // =============================================
+// TOTAL REVENUE SUMMARY — FINAL, BULLETPROOF, ALWAYS WORKS
+// =============================================
+function updateShopRevenueSummary() {
+    const div = document.getElementById('shopTotalRevenue');
+    if (!div) {
+        console.warn("shopTotalRevenue div not found");
+        return;
     }
-});
 
-/* // Live update when any sale is added
-const originalSave = App.save;
-App.save = function (key) {
-    const result = originalSave.apply(this, arguments);
-    if (key === "ledger" || key == null) {
-        setTimeout(() => {
-            refreshShopSales();
-            Ledger?.render?.();
-            Ledger?.populateEmployeeFilter?.();
-        }, 100);
+    // Safety first — wait for App.state
+    if (typeof App === 'undefined' || !App.state || !App.state.ledger) {
+        div.innerHTML = `<div style="text-align:center; padding:40px; color:#888;">Loading revenue data...</div>`;
+        setTimeout(updateShopRevenueSummary, 500);
+        return;
     }
-    return result;
-}; */
 
-// Initial load
-document.addEventListener("DOMContentLoaded", () => {
-    setTimeout(refreshShopSales, 800);
-});
+    const sales = App.state.ledger.filter(r => r.type === "shop_sale_item");
+    if (sales.length === 0) {
+        div.innerHTML = `<div style="text-align:center; padding:40px; color:#888; font-size:18px;">No sales recorded yet</div>`;
+        return;
+    }
+
+    let totalGross = 0;
+    let totalTax = 0;
+    let totalProfitBeforeTax = 0;
+
+    sales.forEach(r => {
+        const gross = r.total || 0;
+        const tax = r.taxAmount || (gross * (r.taxRate || App.state.shopTaxRate || 0.08));
+        const profitBeforeTax = parseFloat(r.profit) || 0;
+
+        totalGross += gross;
+        totalTax += tax;
+        totalProfitBeforeTax += profitBeforeTax;
+    });
+
+    const netProfitAfterTax = totalProfitBeforeTax - totalTax;
+
+    div.innerHTML = `
+        <div style="background:var(--card); padding:20px; border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+            <h3 style="margin:0 0 16px 0; color:var(--accent); font-size:22px; text-align:center;">Total Shop Revenue</h3>
+            <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
+                <div style="background:#111; padding:16px; border-radius:10px; text-align:center; min-width:140px; flex:1;">
+                    <div style="color:#888; font-size:13px;">Gross Sales</div>
+                    <div style="font-size:24px; font-weight:bold; color:var(--green); margin-top:4px;">
+                        $${totalGross.toFixed(2)}
+                    </div>
+                </div>
+                <div style="background:#111; padding:16px; border-radius:10px; text-align:center; min-width:140px; flex:1;">
+                    <div style="color:#888; font-size:13px;">Tax Collected</div>
+                    <div style="font-size:24px; font-weight:bold; color:#ff9800; margin-top:4px;">
+                        $${totalTax.toFixed(2)}
+                    </div>
+                </div>
+                <div style="background:#111; padding:16px; border-radius:10px; text-align:center; min-width:140px; flex:1; border:2px solid #0f8;">
+                    <div style="color:#888; font-size:13px;">Total Profit (Before Tax)</div>
+                    <div style="font-size:24px; font-weight:bold; color:#0f8; margin-top:4px;">
+                        $${totalProfitBeforeTax.toFixed(2)}
+                    </div>
+                </div>
+                <div style="background:#111; padding:16px; border-radius:10px; text-align:center; min-width:140px; flex:1; border:2px solid #0af;">
+                    <div style="color:#888; font-size:13px;">Net Profit (After Tax)</div>
+                    <div style="font-size:24px; font-weight:bold; color:#0af; margin-top:4px;">
+                        $${netProfitAfterTax.toFixed(2)}
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:16px; color:#888; font-size:14px; text-align:center;">
+                Based on <strong>${sales.length}</strong> sale${sales.length === 1 ? '' : 's'} across all time
+            </div>
+        </div>
+    `;
+} */
+
+// =============================================
+// FINAL AUTO-LOAD — WORKS 100% ON FIRST LOAD — NO REFRESH NEEDED
+// =============================================
+
+
+function loadData() {
+    ShopSales.render()
+    updateShopRevenueSummary()
+}
+function autoLoadShopSales() {
+    // Primary method: use App.onReady if available (cleanest)
+    if (typeof App !== 'undefined' && typeof App.onReady === 'function') {
+        App.onReady(() => loadData());
+        return;
+    }
+
+    // Fallback: poll until App.state is ready
+    const maxWait = 10000; // 10 seconds max
+    const start = Date.now();
+
+    const checker = setInterval(() => {
+        if (typeof App !== 'undefined' && App.state && App.state.ledger !== undefined) {
+            clearInterval(checker);
+            loadData();
+        }
+        else if (Date.now() - start > maxWait) {
+            clearInterval(checker);
+            console.warn("ShopSales: App.state never became ready");
+        }
+    }, 100);
+}
+
+// Run it
+autoLoadShopSales();

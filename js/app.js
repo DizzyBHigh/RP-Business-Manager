@@ -841,7 +841,8 @@ const App = {
             Inventory.render();
             Ledger.render();
             //PriceList.render();
-            Categories.render();
+            //Categories.render();
+            autoLoadShopSales();
             EmployeeManager.render();
             RawMaterials.renderPrices();
             RolesManager.render();

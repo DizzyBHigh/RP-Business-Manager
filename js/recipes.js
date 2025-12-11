@@ -1,3 +1,11 @@
+// NEW: Helper to force Proper Case (CamelCase) for recipe names
+function toProperCase(str) {
+    return str
+        .toLowerCase()
+        .replace(/(^|\s|-)\w/g, letter => letter.toUpperCase())
+        .replace(/#/g, ' #'); // Preserve # in "Christmas #1"
+}
+
 // ==========================
 // Recipe Manager / Editor — NOW WITH WEIGHT PER FINISHED ITEM
 // ==========================
@@ -113,6 +121,10 @@ const RecipeEditor = {
         const name = sanitizeItemName(document.getElementById("newItemName").value.trim());
         if (!name || App.state.recipes[name]) return showToast("fail,", "Invalid or duplicate name!");
 
+        // NEW: Force Proper Case for new recipe name
+        const properName = toProperCase(name);
+        document.getElementById("newItemName").value = properName; // Update UI
+
         const ingredients = {};
         document.querySelectorAll("#newIngredients .ingredient-row").forEach(r => {
             const ing = r.querySelector("input[type=text]").value.trim();
@@ -125,7 +137,7 @@ const RecipeEditor = {
         const weight = weightInput ? parseFloat(weightInput.value) : 0;
         const safeWeight = isNaN(weight) ? 0 : weight;
 
-        App.state.recipes[name] = {
+        App.state.recipes[properName] = {
             i: ingredients,
             y: yield,
             weight: safeWeight
@@ -135,7 +147,7 @@ const RecipeEditor = {
         App.refresh();
         debouncedCalcRun();
 
-        showToast("success", `"${name}" created with ${safeWeight.toFixed(2)} kg weight!`);
+        showToast("success", `"${properName}" created with ${safeWeight.toFixed(2)} kg weight!`);
 
         // Reset
         document.getElementById("newItemName").value = "";
@@ -315,10 +327,14 @@ const RecipeEditor = {
         showToast("success", `"${name}" obliterated from existence.`);
         RecipeEditor.renderRecipeTable();
     },
+
     save() {
         const originalName = document.getElementById("recipeSearch").value.trim();
         const newName = sanitizeItemName(document.getElementById("editItemName").value.trim());
         if (!newName) return showToast("fail", "Name required!");
+
+        // NEW: Force Proper Case for new recipe name
+        const properNewName = toProperCase(newName);
 
         // Build recipe
         const ingredients = {};
@@ -335,24 +351,25 @@ const RecipeEditor = {
         };
 
         // If renamed → delete old key first
-        if (newName !== originalName) {
+        if (properNewName !== originalName) {
             SHARED_DOC_REF.update({
                 [`recipes.${originalName}`]: firebase.firestore.FieldValue.delete()
             }).catch(() => { });
         }
 
         // Save new/updated recipe
-        App.state.recipes[newName] = recipe;
+        App.state.recipes[properNewName] = recipe;
 
         // Use App.save() for the actual save (it works for adding/updating)
         App.save("recipes");
 
         // UI cleanup
         document.getElementById("editArea").style.display = "none";
-        document.getElementById("recipeSearch").value = newName;
-        showToast("success", `"${newName}" saved!`);
+        document.getElementById("recipeSearch").value = properNewName;
+        showToast("success", `"${properNewName}" saved!`);
         RecipeEditor.renderRecipeTable();
     },
+
     cancel() {
         // Clear the form
         document.getElementById("editArea").innerHTML = "";
@@ -366,6 +383,7 @@ const RecipeEditor = {
 
         showToast("info", "Edit cancelled");
     },
+
     showCreateForm() {
         const section = document.getElementById("createRecipeSection");
         if (section) {
@@ -378,6 +396,7 @@ const RecipeEditor = {
             document.getElementById("newItemName")?.focus();
         }
     },
+
     cancelCreate() {
         const section = document.getElementById("createRecipeSection");
         if (section) {
@@ -395,6 +414,7 @@ const RecipeEditor = {
 
         showToast("info", "Create cancelled — form cleared");
     },
+
     renderRecipeTable() {
         const tbody = document.getElementById("recipeTableBody");
         const noRecipes = document.getElementById("noRecipes");
@@ -464,5 +484,81 @@ const RecipeEditor = {
         tbody.innerHTML = "";
         tbody.appendChild(fragment);
     },
+
+    // Auto-fix ledger entries to match proper-cased recipe names
+    fixLedgerCases() {
+        const toProperCase = (str) => str
+            .toLowerCase()
+            .replace(/(^|\s|-)\w/g, l => l.toUpperCase())
+            .replace(/#/g, ' #');
+
+        let fixed = 0;
+        App.state.ledger = App.state.ledger.map(entry => {
+            if (entry.type !== "shop_sale_item") return entry;
+
+            const properName = toProperCase(entry.item);
+            if (properName !== entry.item) {
+                entry.item = properName;
+                fixed++;
+            }
+            return entry;
+        });
+
+        if (fixed > 0) {
+            App.save("ledger").then(() => {
+                console.log(`Auto-fixed ${fixed} ledger entries`);
+                showToast("info", `Auto-fixed ${fixed} sales entries`);
+                ShopSales.render();
+                Ledger.render?.();
+            });
+        }
+    }
 };
 
+
+
+// AUTO-FIX: Proper Case for Recipe Names — SAFE & RELIABLE
+(function safeAutoFixRecipeNames() {
+    const toProperCase = (str) => str
+        .toLowerCase()
+        .replace(/(^|\s|-)\w/g, l => l.toUpperCase())
+        .replace(/#/g, ' #');
+
+    // Wait for App to be ready
+    const tryFix = () => {
+        if (typeof App === 'undefined' || !App.state || !App.state.recipes) {
+            // App not ready yet — try again in 200ms
+            setTimeout(tryFix, 200);
+            return;
+        }
+
+        let fixed = 0;
+        const newRecipes = {};
+
+        Object.keys(App.state.recipes).forEach(oldName => {
+            const properName = toProperCase(oldName);
+            if (properName !== oldName) {
+                console.log(`Auto-fixed recipe: "${oldName}" → "${properName}"`);
+                fixed++;
+            }
+            newRecipes[properName] = App.state.recipes[oldName];
+        });
+
+        if (fixed > 0) {
+            App.state.recipes = newRecipes;
+            App.save("recipes").then(() => {
+                console.log(`Auto-fixed ${fixed} recipe names!`);
+                showToast("info", `Auto-fixed ${fixed} recipe names`);
+                if (typeof RecipeEditor !== 'undefined' && RecipeEditor.renderRecipeTable) {
+                    RecipeEditor.renderRecipeTable();
+                }
+                if (typeof RecipeEditor !== 'undefined' && RecipeEditor.fixLedgerCases) {
+                    RecipeEditor.fixLedgerCases();
+                }
+            });
+        }
+    };
+
+    // Start checking
+    tryFix();
+})();

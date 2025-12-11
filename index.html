@@ -483,19 +483,34 @@
 
     <!-- SHOP SALES HISTORY -->
     <div id="shopsales" class="tab-content">
-        <h2>Shop Sales History</h2>
-        <p style="color:#888; text-align:center; margin-bottom:20px;">All daily shop sales ever imported</p>
-
-        <div class="controls" style="margin-bottom:20px; justify-content:center;">
-            <input type="date" id="shopSalesFrom" onchange="ShopSales.render()">
-            <input type="date" id="shopSalesTo" onchange="ShopSales.render()">
-            <button class="primary" onclick="ShopSales.render()">Refresh</button>
-            <!-- <button class="success" onclick="ShopSales.export()">Export All</button> -->
+        <div style="background:var(--card); padding:5px; border-radius:12px; margin:5px 0; text-align:center;">
+            <h2>Shop Sales History</h2>
+            <p style="color:#888; text-align:center; margin-bottom:20px;">All daily shop sales ever imported</p>
         </div>
 
-        <div
-            style="background:var(--card); padding:16px; border-radius:8px; margin-bottom:20px; text-align:center; font-size:18px;">
-            <strong>Total Shop Revenue: <span id="shopTotalRevenue" style="color:var(--green);">$0.00</span></strong>
+
+        <div class="controls" style="margin-bottom:5px; justify-content:center;">
+            <!-- <input type="date" id="shopSalesFrom" onchange="refreshShopSalesEverything()">
+            <input type="date" id="shopSalesTo" onchange="refreshShopSalesEverything()"> -->
+            <!-- <button class="primary" onclick="loadData()">Refresh</button> -->
+            <h3 style="color:var(--accent);">Shop Tax Rate</h3>
+            <div style="display:flex; gap:12px; align-items:center; justify-content:center; flex-wrap:wrap;">
+                <input type="number" id="shopTaxRateInput" step="0.01" min="0" max="100" value="8.00"
+                    style="width:100px; padding:10px; font-size:14px; text-align:center; border-radius:8px; border:2px solid var(--border);">
+                <span style="font-size:14px;">%</span>
+                <button onclick="ShopSales.saveTaxRate()"
+                    style="padding:12px 12px; background:#00aa00; color:white; font-weight:bold; border:none; border-radius:8px; cursor:pointer;">
+                    Save Tax Rate
+                </button>
+            </div>
+            <h3 style="color:var(--accent); display:block;font-size:14px;">
+                Current rate: <strong id="currentTaxDisplay">8.00%</strong> —
+                Tax is deducted from sales and recorded per transaction
+            </h3>
+        </div>
+
+        <div id="shopTotalRevenue" style="margin:40px 0;">
+            <!-- Revenue summary will appear here -->
         </div>
 
         <table style="width:100%;">
@@ -507,6 +522,10 @@
                     <th>Qty Sold</th>
                     <th>Unit Price</th>
                     <th>Total</th>
+                    <th>Cost/Unit</th>
+                    <th>Profit</th>
+                    <th>Tax</th>
+                    <th>Net Profit</th>
                     <th>Source</th>
                 </tr>
             </thead>
