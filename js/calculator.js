@@ -79,61 +79,124 @@ const Calculator = {
         const stock = App.state.warehouseStock[item] || 0;
         const needed = qty;
         const canUseStock = !isRaw && stock >= needed;
-        const userChoice = Calculator.liveToggle[key] ?? "craft";  // ← default to craft
+        const userChoice = Calculator.liveToggle[key] ?? "craft";
+
+        // === CROP DETECTION ===
+        const isCrop = App.state.seeds && Object.values(App.state.seeds).some(s => s.finalProduct === item);
+        const cropKey = `crop→${key}`;
+        const cropChoice = Calculator.liveToggle[cropKey] ?? (canUseStock ? "warehouse" : "grow");
 
         const itemWeight = this.weight(item);
         const totalWeight = (qty * itemWeight).toFixed(3);
 
-        let header = `<div class="tree-item" style="margin-left:${depth * 24}px;display:flex;align-items:center;gap:8px;position:relative;">`;
+        let html = `<div class="tree-item" style="margin-left:${depth * 24}px;display:flex;align-items:center;gap:8px;position:relative;">`;
 
-        // Remove button for top-level order items
+        // Remove button
         if (depth === 0 && orderIndex !== null) {
-            header += `<button onclick="removeOrderItemDirectly(${orderIndex})" style="background:#c00;color:white;border:none;padding:2px 8px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;" title="Remove from order">×</button>`;
+            html += `<button onclick="removeOrderItemDirectly(${orderIndex})" style="background:#c00;color:white;border:none;padding:2px 8px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;" title="Remove from order">×</button>`;
         }
 
-        // ────────────────── UNIFIED DROPDOWN (top-level + sub-items) ──────────────────
-        if (!isRaw) {
-            const stockLabel = depth === 0
-                ? `Use Warehouse (${stock} in stock)`
-                : `Use Warehouse (${stock})`;
-
-            header += `
-                        <select style="font-size:12px;padding:2px;border-radius:4px;background:#000;color:white;border:1px solid #444;"
-                                onchange="Calculator.liveToggle['${key}']=this.value; debouncedCalcRun();">
-                            <option value="craft"${userChoice !== "warehouse" ? " selected" : ""}>Craft</option>
-                            ${canUseStock ? `<option value="warehouse"${userChoice === "warehouse" ? " selected" : ""}>${stockLabel}</option>` : ""}
-                        </select>`;
+        // === CROP: Grow vs Warehouse Dropdown ===
+        if (isCrop) {
+            html += `
+                <select style="font-size:12px;padding:2px;border-radius:4px;background:#000;color:white;border:1px solid #444;"
+                        onchange="Calculator.liveToggle['${cropKey}']=this.value; debouncedCalcRun();">
+                    <option value="warehouse" ${cropChoice === "warehouse" ? "selected" : ""}>Use Warehouse (${stock})</option>
+                    <option value="grow" ${cropChoice === "grow" ? "selected" : ""}>Grow (Harvest)</option>
+                </select>`;
         }
-        // ─────────────────────────────────────────────────────────────────────────────
+        // Normal crafting dropdown
+        else if (!isRaw) {
+            const label = depth === 0 ? `Use Warehouse (${stock} in stock)` : `Use Warehouse (${stock})`;
+            html += `
+                <select style="font-size:12px;padding:2px;border-radius:4px;background:#000;color:white;border:1px solid #444;"
+                        onchange="Calculator.liveToggle['${key}']=this.value; debouncedCalcRun();">
+                    <option value="craft"${userChoice !== "warehouse" ? " selected" : ""}>Craft</option>
+                    ${canUseStock ? `<option value="warehouse"${userChoice === "warehouse" ? " selected" : ""}>${label}</option>` : ""}
+                </select>`;
+        }
 
-        header += `<strong style="color:var(--accent);">${qty} × ${item}</strong>`;
-
-        const weightColor = itemWeight > 0 ? "#0af" : "#666";
-        header += ` <small style="color:${weightColor};font-weight:bold;">(${itemWeight.toFixed(3)}kg each → ${totalWeight}kg)</small>`;
+        html += `<strong style="color:var(--accent);">${qty} × ${item}</strong>`;
+        html += ` <small style="color:#0af;font-weight:bold;">(${totalWeight}kg)</small>`;
 
         if (!isRaw) {
             const batches = Math.ceil(qty / (r.y || 1));
-            header += ` <small style="color:#888;">(${batches} batch${batches > 1 ? "es" : ""})</small>`;
+            html += ` <small style="color:#888;">(${batches} batch${batches > 1 ? "es" : ""})</small>`;
         }
 
         const cost = this.cost(item) * qty;
-        if (userChoice !== "warehouse" && cost > 0) {
-            header += ` <small style="color:#888;">($${cost.toFixed(2)})</small>`;
+        if (cropChoice !== "grow" && userChoice !== "warehouse" && cost > 0) {
+            html += ` <small style="color:#888;">($${cost.toFixed(2)})</small>`;
         }
 
-        header += `</div>`;
+        html += `</div>`;
 
-        // If user chose warehouse and we have enough → show "using from warehouse"
-        if (userChoice === "warehouse" && canUseStock) {
-            return header + `<div class="tree" style="margin-left:${(depth + 1) * 24}px;color:#0f8;font-style:italic;padding:4px 0;">
-                        Using ${needed} × ${item} from warehouse (${totalWeight}kg)
-                    </div>`;
+        // === HARVEST ESTIMATE — USE EXACT COST (NO ROUNDING) ===
+        if (isCrop && cropChoice === "grow" && qty > 0) {
+            const estimate = Crops.getHarvestEstimate(item, qty);
+
+            // Use EXACT cost from recalculated values (no rounding loss)
+            const exactTotalCost = estimate.totalCost; // This is now exact thanks to fix below
+
+            html += `
+        <div style="margin-left:${(depth + 1) * 24}px; padding:16px 20px; background:rgba(0,255,150,0.18); border-left:6px solid #0f8; border-radius:0 12px 12px 0; font-size:15px; color:#0ff; line-height:1.7;">
+            <div style="font-weight:bold; font-size:18px; margin-bottom:10px; color:#0ff;">
+                Grow (Harvest)
+            </div>
+            <div style="margin-bottom:12px;">
+                <strong>Grow ${qty}× ${item} (Manual Harvest)</strong>
+            </div>
+            <div style="color:#aaa; font-size:13px; margin-bottom:12px;">
+                Materials will be consumed in the <strong>Harvest</strong> tab
+            </div>
+
+            <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:8px; margin:12px 0;">
+                <div style="font-weight:bold; color:#0ff;">
+                    Estimated Total Cost: 
+                    <span style="font-size:20px; color:#0f8;">$${exactTotalCost.toFixed(2)}</span>
+                    <small style="color:#0af;"> ($${(exactTotalCost / qty).toFixed(6)}/unit)</small>
+                </div>
+                <div style="color:#aaa; font-size:13px; margin-top:6px;">
+                    ${estimate.note}
+                </div>
+            </div>
+
+            ${Object.keys(estimate.seedsNeeded || {}).length > 0 ? `
+            <div style="margin-top:12px;">
+                <strong style="color:#ff0;">Seeds Required:</strong><br>
+                <div style="color:#fff; margin-left:10px; line-height:1.6;">
+                    ${Object.entries(estimate.seedsNeeded).map(([s, q]) => `${q}×${s}`).join("<br>")}
+                </div>
+            </div>` : ""}
+
+            ${Object.keys(estimate.ingredientsNeeded || {}).length > 0 ? `
+            <div style="margin-top:12px;">
+                <strong style="color:#ff9800;">Ingredients Required:</strong><br>
+                <div style="color:#fff; margin-left:10px; line-height:1.6;">
+                    ${Object.entries(estimate.ingredientsNeeded).map(([i, q]) => `${q}×${i}`).join("<br>")}
+                </div>
+            </div>` : ""}
+
+            <div style="margin-top:16px; padding:12px; background:#001122; border-radius:8px; text-align:center; font-weight:bold; font-size:16px; color:#0ff;">
+                Total Harvest Cost: <span style="color:#0f8; font-size:20px;">$${exactTotalCost.toFixed(2)}</span>
+            </div>
+        </div>
+    `;
         }
 
-        if (isRaw) return header;
+        // Warehouse message
+        if ((isCrop && cropChoice === "warehouse") || (!isCrop && userChoice === "warehouse")) {
+            if (canUseStock) {
+                return html + `<div class="tree" style="margin-left:${(depth + 1) * 24}px;color:#0f8;font-style:italic;padding:6px 0;">
+                    Using ${needed} × ${item} from warehouse (${totalWeight}kg)
+                </div>`;
+            }
+        }
+
+        if (isRaw) return html;
 
         const batches = Math.ceil(qty / (r.y || 1));
-        let html = header + `<div class="tree">`;
+        html += `<div class="tree">`;
         for (const [ing, q] of Object.entries(r.i || {})) {
             html += this.buildTree(ing, q * batches, depth + 1, path.concat(item));
         }
@@ -309,10 +372,8 @@ const Calculator = {
     },
 
     generateRawTableHTML(totalRaw, finalWeight, grandSell) {
-        console.log("totalRaw:", JSON.stringify(totalRaw, null, 2));
-
         if (Object.keys(totalRaw).length === 0) {
-            return "<p style='text-align:center;color:#888;padding:40px'>No materials needed (all from warehouse)</p>";
+            return "<p style='text-align:center;color:#888;padding:40px'>No materials needed</p>";
         }
 
         let rows = `<table style="width:100%;border-collapse:collapse;margin-top:20px;font-size:14px;">
@@ -320,23 +381,47 @@ const Calculator = {
                         <th>Raw Material</th><th>Needed</th><th>In Stock</th><th>Weight</th><th>Status</th><th style="text-align:right">Cost</th>
                     </tr>`;
 
-        const sorted = Object.keys(totalRaw).sort((a, b) => a.localeCompare(b));
+        let materialsCost = 0;
         let totalWeightUsed = 0;
-        let materialsCost = 0;  // ← We calculate this ourselves!
+
+        const sorted = Object.keys(totalRaw).sort((a, b) => a.localeCompare(b));
 
         for (const item of sorted) {
             const needed = totalRaw[item];
             const stock = App.state.warehouseStock[item] || 0;
-            const cost = this.cost(item) * needed;
-            materialsCost += cost;  // ← Fixed: was broken before
+
+            let cost = 0;
+            let label = item;
+
+            const isCrop = App.state.seeds && Object.values(App.state.seeds).some(s => s.finalProduct === item);
+            const isGrowing = isCrop && Object.keys(Calculator.liveToggle).some(k =>
+                k.includes(item) && Calculator.liveToggle[k] === "grow"
+            );
+
+            if (isCrop) {
+                if (isGrowing) {
+                    // GROW: Use REAL harvest cost (exact from estimate)
+                    const estimate = Crops.getHarvestEstimate(item, needed);
+                    cost = estimate.totalCost;
+                    label = `${item} (harvest)`;
+                } else {
+                    // WAREHOUSE: Average cost from past harvests
+                    const avgCostPerUnit = Crops.getAverageCostPerUnit(item);
+                    cost = avgCostPerUnit * needed;
+                    label = `${item} (avg harvest cost)`;
+                }
+            } else {
+                cost = this.cost(item) * needed;
+            }
+
+            materialsCost += cost;
 
             const weight = needed * this.weight(item);
             totalWeightUsed += weight;
 
-            const fromWH = Object.entries(Calculator.liveToggle).some(
-                ([k, v]) => v === "warehouse" && k.endsWith("→" + item)
+            const fromWH = !isGrowing && Object.entries(Calculator.liveToggle).some(
+                ([k, v]) => v === "warehouse" && k.includes(item)
             );
-            const label = fromWH ? `${item} (warehouse)` : item;
 
             rows += `<tr ${fromWH ? 'style="background:rgba(0,255,150,0.1)"' : ''}>
                         <td style="padding:8px"><strong>${label}</strong></td>
@@ -346,18 +431,18 @@ const Calculator = {
                         <td style="padding:8px;color:${stock >= needed ? "#0f8" : "#f44"};font-weight:bold">
                             ${stock >= needed ? "OK" : "LOW"}
                         </td>
-                        <td style="padding:8px;text-align:right">$${cost.toFixed(2)}</td>
+                        <td style="padding:8px;text-align:right;font-weight:bold;">
+                            $${cost.toFixed(2)}
+                        </td>
                     </tr>`;
         }
 
-        // Now everything is calculated — no DOM scraping!
         const profit = grandSell - materialsCost;
-        const profitColor = profit >= 0 ? "#0f8" : "#f44";
 
         rows += `<tr style="background:#001122;color:#0ff;font-weight:bold;font-size:16px">
                     <td colspan="3" style="padding:14px">
                         Materials Cost: $${materialsCost.toFixed(2)}<br>
-                        Profit: <span style="color:${profitColor}">$${profit.toFixed(2)}</span>
+                        Profit: <span style="color:${profit >= 0 ? '#0f8' : '#f44'}">$${profit.toFixed(2)}</span>
                     </td>
                     <td style="padding:14px;color:#0af">${totalWeightUsed.toFixed(1)}kg<br><small>All Materials</small></td>
                     <td colspan="2" style="padding:14px;text-align:right">

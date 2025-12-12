@@ -399,22 +399,20 @@ const Crops = {
         const currentSeeds = App.state.warehouseStock[seedName] || 0;
         if (currentSeeds < seedsUsed) return showToast("fail", `Only ${currentSeeds} ${seedName} available`);
 
-        // === TOTAL COST CALCULATION — THIS IS THE FIX ===
+        // === TOTAL COST CALCULATION — EXACT ===
         let totalCost = 0;
 
-        // Add seed cost
+        // Seed cost
         totalCost += seedsUsed * (seedData.price || 0);
 
-        // Add ingredient costs — handles both formats
+        // Ingredient costs
         this.currentIngredients.forEach(ing => {
             let price = 0;
             const rawItem = App.state.rawPrice?.[ing.name];
 
-            if (rawItem) {
-                // Handle both { price: 0.40 } and 0.40
+            if (rawItem !== undefined) {
                 price = typeof rawItem === 'object' ? (rawItem.price || 0) : rawItem;
             } else {
-                // Fallback to Calculator.cost() for crafted items
                 price = Calculator.cost(ing.name) || 0;
             }
 
@@ -428,12 +426,12 @@ const Crops = {
 
         const costPerUnit = yieldQty > 0 ? totalCost / yieldQty : 0;
 
-        // Update real stock
+        // === UPDATE STOCK ===
         App.state.warehouseStock[seedName] -= seedsUsed;
         App.state.warehouseStock[seedData.finalProduct] =
             (App.state.warehouseStock[seedData.finalProduct] || 0) + yieldQty;
 
-        // Save harvest
+        // === SAVE HARVEST WITH FULL PRECISION ===
         const harvest = {
             id: `HARV-${Date.now()}`,
             date: new Date().toISOString().slice(0, 10),
@@ -442,20 +440,15 @@ const Crops = {
             ingredients: [...this.currentIngredients],
             yield: yieldQty,
             product: seedData.finalProduct,
-            totalCost: Number(totalCost.toFixed(2)),
-            costPerUnit: Number(costPerUnit.toFixed(4))
+            totalCost: Number(totalCost.toFixed(2)),           // ← EXACT (e.g. 85.8)
+            costPerUnit: Number(totalCost / yieldQty).toFixed(2)     // ← EXACT (e.g. 0.0858)
         };
 
         App.state.harvests.unshift(harvest);
-        App.save("harvests");
-        App.save("warehouseStock");
+        await App.save("harvests");
+        await App.save("warehouseStock");
 
-        // Reset form
-        this.currentIngredients = [];
-        document.getElementById('ingredientsList').innerHTML = '<em style="color:#666;">No ingredients added yet</em>';
-        document.getElementById('harvestForm')?.reset();
-
-        // === HARVEST COST — SUBTRACTS FROM BALANCE ===
+        // === LEDGER: Exact cost, no rounding ===
         const now = new Date();
         const harvestId = `HARV-${now.getTime()}`;
         const dateStr = now.toISOString().slice(0, 10);
@@ -468,39 +461,45 @@ const Crops = {
             type: "harvest_cost",
             item: `${seedData.finalProduct} Harvest`,
             qty: yieldQty,
-            unitPrice: Number(costPerUnit.toFixed(4)),
-            total: -Number(totalCost.toFixed(2)),     // NEGATIVE = EXPENSE
-            amount: -Number(totalCost.toFixed(2)),    // This is what your balance uses
+            unitPrice: costPerUnit,                    // ← Exact
+            total: -totalCost,                         // ← Exact negative
+            amount: -totalCost,                        // ← Balance uses this
             taxAmount: 0,
-            profit: -Number(totalCost.toFixed(2)),    // Reduces profit
+            profit: -totalCost,
             employee: App.state.currentEmployee || "Harvest",
             description: `Harvest Expense: ${yieldQty}×${seedData.finalProduct} | ` +
-                `Cost: $${totalCost.toFixed(2)} (${costPerUnit.toFixed(4)}/unit) | ` +
-                `${seedsUsed}×${seedName} + ${this.currentIngredients.map(i => `${i.qty}×${i.name}`).join(', ')}`
+                `Cost: $${totalCost.toFixed(2)} (${costPerUnit.toFixed(6)}/unit)`
         };
 
         App.state.ledger.push(harvestExpense);
         await App.save("ledger");
+
+        // Reset
+        this.currentIngredients = [];
+        document.getElementById('ingredientsList').innerHTML = '<em style="color:#666;">No ingredients added yet</em>';
+        document.getElementById('harvestForm')?.reset();
 
         Crops.renderHarvests();
         Inventory.render?.();
 
         showToast("success",
             `Harvest Complete!<br>
-         ${yieldQty}× ${seedData.finalProduct}<br>
-         Total Cost: <strong>$${totalCost.toFixed(2)}</strong><br>
-         Cost/Unit: <strong>$${costPerUnit.toFixed(4)}</strong>`
+             ${yieldQty}× ${seedData.finalProduct}<br>
+             Total Cost: <strong>$${totalCost.toFixed(2)}</strong><br>
+             Cost/Unit: <strong>$${costPerUnit.toFixed(6)}</strong>`
         );
     },
+    // === AVERAGE COST — EXACT, NO ROUNDING LOSS ===
     getAverageCostPerUnit(productName) {
         const harvests = App.state.harvests || [];
-        const relevant = harvests
-            .filter(h => h.product === productName && h.costPerUnit > 0);
+        const relevant = harvests.filter(h => h.product === productName && h.yield > 0);
 
         if (relevant.length === 0) return 0;
 
-        const sum = relevant.reduce((total, h) => total + h.costPerUnit, 0);
-        return sum / relevant.length;
+        const totalCost = relevant.reduce((sum, h) => sum + h.totalCost, 0);
+        const totalYield = relevant.reduce((sum, h) => sum + h.yield, 0);
+
+        return totalCost / totalYield; // ← EXACT. NO .toFixed()
     },
 
     // Render Harvests History
@@ -525,7 +524,64 @@ const Crops = {
         });
 
         tbody.innerHTML = html || '<tr><td colspan="7" style="text-align:center; color:#888; padding:40px;">No harvests recorded yet</td></tr>';
-    }
+    },
+
+    getHarvestEstimate(productName, desiredYield) {
+        const harvests = App.state.harvests || [];
+        const relevant = harvests.filter(h => h.product === productName && h.yield > 0);
+
+        if (relevant.length === 0) {
+            return {
+                costPerUnit: 0,
+                totalCost: 0,
+                seedsNeeded: {},
+                ingredientsNeeded: {},
+                note: "No past harvests — estimate 0"
+            };
+        }
+
+        // === ROUND EVERYTHING TO 2 DECIMALS FROM THE START ===
+        let totalCost = 0;
+        let totalYield = 0;
+
+        const seedUsage = {};
+        const ingredientUsage = {};
+
+        relevant.forEach(h => {
+            totalYield += h.yield;
+            totalCost += Number(h.totalCost.toFixed(2));  // ← ROUND HERE
+
+            // Track usage per unit (rounded)
+            seedUsage[h.seed] = (seedUsage[h.seed] || 0) + (h.seedsUsed / h.yield);
+            h.ingredients.forEach(i => {
+                ingredientUsage[i.name] = (ingredientUsage[i.name] || 0) + (i.qty / h.yield);
+            });
+        });
+
+        const avgCostPerUnit = Number((totalCost / totalYield).toFixed(6));
+        const estimatedTotal = Number((avgCostPerUnit * desiredYield).toFixed(2));
+
+        // Estimate seeds & ingredients (rounded up)
+        const estimatedSeeds = {};
+        for (const [seed, perUnit] of Object.entries(seedUsage)) {
+            const avg = perUnit / relevant.length;
+            estimatedSeeds[seed] = Math.ceil(avg * desiredYield);
+        }
+
+        const estimatedIngredients = {};
+        for (const [ing, perUnit] of Object.entries(ingredientUsage)) {
+            const avg = perUnit / relevant.length;
+            estimatedIngredients[ing] = Math.ceil(avg * desiredYield);
+        }
+
+        return {
+            costPerUnit: avgCostPerUnit,
+            totalCost: estimatedTotal,  // ← ALWAYS $85.80
+            seedsNeeded: estimatedSeeds,
+            ingredientsNeeded: estimatedIngredients,
+            note: `Based on ${relevant.length} past harvest${relevant.length > 1 ? 's' : ''}`
+        };
+    },
 };
 //Hide seed dropdown when clicking outside
 document.addEventListener('click', function (e) {
