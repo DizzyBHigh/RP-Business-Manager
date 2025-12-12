@@ -66,6 +66,7 @@
         <div class="tab" data-tab="pricelist">Price List</div>
         <div class="tab" data-tab="categories">Category Manager</div>
         <div class="tab" data-tab="rawprices">Raw Materials</div>
+        <div class="tab" data-tab="rawpurchase">Raw Materials</div>
         <div class="tab" data-tab="recipes">Recipe Editor</div>
         <div class="tab" data-tab="sync">Sync - Import / Export</div>
         <div class="tab" data-tab="employees">Employees</div>
@@ -572,85 +573,7 @@
     </div>
 
 
-    <!-- RAW MATERIAL PURCHASE — CLEAN & FINAL VERSION -->
-    <!-- MULTI-PURCHASE RAW MATERIALS — CLEAN & POWERFUL -->
-    <div style="margin:40px 0; text-align:center;">
-        <button id="showMultiPurchaseBtn" class="primary large"
-            style="padding:16px 40px; font-size:20px; font-weight:bold;">
-            PURCHASE RAW MATERIALS
-        </button>
-    </div>
 
-    <!-- MULTI-PURCHASE FORM (hidden by default) -->
-    <div id="multiPurchaseForm"
-        style="display:none; background:var(--card); padding:30px; border-radius:16px; border:3px solid #0af; border-radius:16px; margin:30px 0;">
-        <h2 style="text-align:center; color:#0ff; margin-top:0;">Multi-Item Purchase</h2>
-
-        <div id="purchaseLines">
-            <!-- First line -->
-            <div class="purchase-line"
-                style="display:grid; grid-template-columns:3.5fr 1fr 1.5fr 1.5fr 1.2fr auto; gap:14px; align-items:center; margin-bottom:14px; padding:8px 0;">
-
-                <!-- ITEM SEARCH -->
-                <div style="position:relative;">
-                    <input type="text" class="item-search" placeholder="Search item..."
-                        style="width:80%; padding:14px 16px; font-size:16px; background:#001122; border:1px solid #0af; border-radius:8px; color:white;">
-                    <div class="search-results"
-                        style="display:none; position:absolute; top:100%; left:0; right:0; background:#000; border:1px solid #0af; border-top:none; max-height:200px; overflow-y:auto; z-index:10; border-radius:0 0 8px 8px;">
-                    </div>
-                </div>
-
-                <!-- QTY -->
-                <input type="number" class="qty-input" placeholder="Qty" min="1" value="1"
-                    style="padding:14px; font-size:16px; background:#001122; border:1px solid #0af; border-radius:8px; text-align:center;">
-
-                <!-- PRICE PER UNIT -->
-                <input type="number" step="0.01" class="price-input active-input" placeholder="Price/unit"
-                    style="padding:14px; font-size:16px; background:#002200; border:1px solid #0f8; border-radius:8px; color:#0f8; font-weight:bold;">
-
-                <!-- TOTAL PRICE -->
-                <input type="number" step="0.01" class="total-input" placeholder="Total" readonly
-                    style="padding:14px; font-size:16px; background:#001122; border:1px solid #444; border-radius:8px; color:#0af; font-weight:bold;">
-
-                <!-- LINE TOTAL DISPLAY -->
-                <div style="text-align:right; font-weight:bold; color:#0f8; font-size:20px; white-space:nowrap;"
-                    class="line-total">
-                    $0.00
-                </div>
-
-                <!-- REMOVE BUTTON -->
-                <button type="button" class="danger small"
-                    onclick="this.closest('.purchase-line').remove(); RawMaterials.updateMultiTotal()"
-                    style="padding:14px 18px; font-size:20px; font-weight:bold; border-radius:8px; height:100%;">
-                    Remove
-                </button>
-            </div>
-        </div>
-
-        <div style="text-align:center; margin:20px 0;">
-            <button type="button" class="secondary" onclick="RawMaterials.addPurchaseLine()" style="padding:10px 20px;">
-                + Add Another Item
-            </button>
-        </div>
-
-        <div style="background:#001122; padding:20px; border-radius:12px; margin:20px 0; text-align:center;">
-            <div style="font-size:18px; color:#0af;">TOTAL TO PAY</div>
-            <div id="multiTotalDisplay" style="font-size:36px; font-weight:bold; color:#0f8; margin:12px 0;">$0.00</div>
-            <input type="text" id="multiSupplier" placeholder="Supplier name (optional)"
-                style="padding:14px; width:300px; font-size:16px; margin:10px;">
-        </div>
-
-        <div style="text-align:center;">
-            <button class="success large" style="padding:16px 40px; font-size:20px;"
-                onclick="RawMaterials.multiPurchase()">
-                CONFIRM PURCHASE
-            </button>
-            <button class="secondary" style="padding:14px 24px; margin-left:16px;"
-                onclick="RawMaterials.hideMultiForm()">
-                Cancel
-            </button>
-        </div>
-    </div>
 
     <div id="pricelist" class="tab-content">
         <div id="pricelistEditText"
@@ -675,7 +598,9 @@
         </div> -->
         <div id="categoryList"></div>
     </div>
+    <div id="<div id=" rawprices" class="tab-content">" class="tab-content">
 
+    </div>
     <div id="rawprices" class="tab-content">
         <div class="controls">
             <input type="text" id="newRawName" placeholder="Name (e.g. Oak Plank)" style="width:200px;">
@@ -696,6 +621,82 @@
             </thead>
             <tbody></tbody>
         </table>
+    </div>
+
+    <div id="rawpurchase" class="tab-content">
+        <h2>Purchase Raw Materials</h2>
+        <p style="text-align:center; color:#888; margin-bottom:40px;">
+            Buy seeds, fertiliser, wool, and other raw materials<br>
+            Supports multi-item purchases with live totals
+        </p>
+
+        <!-- PURCHASE BUTTON — ONLY HERE, NOWHERE ELSE -->
+        <div style="text-align:center; margin:40px 0;">
+            <button id="showMultiPurchaseBtn" class="primary large"
+                style="padding:20px 60px; font-size:24px; font-weight:bold; border-radius:16px; box-shadow:0 8px 25px rgba(0,170,255,0.3);">
+                PURCHASE RAW MATERIALS
+            </button>
+        </div>
+
+        <!-- MULTI-PURCHASE FORM (hidden by default) -->
+        <div id="multiPurchaseForm"
+            style="display:none; background:var(--card); padding:30px; border-radius:16px; border:3px solid #0af; margin:30px 0;">
+            <h2 style="text-align:center; color:#0ff; margin-top:0;">Multi-Item Purchase</h2>
+
+            <div id="purchaseLines">
+                <!-- First line -->
+                <div class="purchase-line"
+                    style="display:grid; grid-template-columns:3.5fr 1fr 1.5fr 1.5fr 1.2fr auto; gap:14px; align-items:center; margin-bottom:14px; padding:8px 0;">
+                    <div style="position:relative;">
+                        <input type="text" class="item-search" placeholder="Search item..."
+                            style="width:100%; padding:14px 16px; font-size:16px; background:#001122; border:1px solid #0af; border-radius:8px; color:white;">
+                        <div class="search-results"
+                            style="display:none; position:absolute; top:100%; left:0; right:0; background:#000; border:1px solid #0af; border-top:none; max-height:200px; overflow-y:auto; z-index:10; border-radius:0 0 8px 8px;">
+                        </div>
+                    </div>
+                    <input type="number" class="qty-input" placeholder="Qty" min="1" value="1"
+                        style="padding:14px; font-size:16px; background:#001122; border:1px solid #0af; border-radius:8px; text-align:center;">
+                    <input type="number" step="0.01" class="price-input active-input" placeholder="Price/unit"
+                        style="padding:14px; font-size:16px; background:#002200; border:1px solid #0f8; border-radius:8px; color:#0f8; font-weight:bold;">
+                    <input type="number" step="0.01" class="total-input" placeholder="Total" readonly
+                        style="padding:14px; font-size:16px; background:#001122; border:1px solid #444; border-radius:8px; color:#0af; font-weight:bold;">
+                    <div style="text-align:right; font-weight:bold; color:#0f8; font-size:20px;" class="line-total">
+                        $0.00
+                    </div>
+                    <button type="button" class="danger small"
+                        onclick="this.closest('.purchase-line').remove(); RawMaterials.updateMultiTotal()"
+                        style="padding:14px 18px; font-size:20px; font-weight:bold; border-radius:8px;">
+                        Remove
+                    </button>
+                </div>
+            </div>
+
+            <div style="text-align:center; margin:20px 0;">
+                <button type="button" class="secondary" onclick="RawMaterials.addPurchaseLine()"
+                    style="padding:12px 28px; font-size:16px;">
+                    + Add Another Item
+                </button>
+            </div>
+
+            <div style="background:#001122; padding:20px; border-radius:12px; margin:20px 0; text-align:center;">
+                <div style="font-size:18px; color:#0af;">TOTAL TO PAY</div>
+                <div id="multiTotalDisplay" style="font-size:42px; font-weight:bold; color:#0f8; margin:16px 0;">$0.00
+                </div>
+                <input type="text" id="multiSupplier" placeholder="Supplier name (optional)"
+                    style="padding:14px; width:340px; font-size:16px; margin:10px;">
+            </div>
+
+            <div style="text-align:center;">
+                <button class="success large" style="padding:18px 50px; font-size:22px;"
+                    onclick="RawMaterials.multiPurchase()">
+                    CONFIRM PURCHASE
+                </button>
+                <button class="secondary" style="padding:16px 32px; margin-left:20px;"
+                    onclick="RawMaterials.hideMultiForm()">
+                    Cancel
+                </button>
+            </div>
+        </div>
     </div>
 
     <div id="recipes" class="tab-content">
