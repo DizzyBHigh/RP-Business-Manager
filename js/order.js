@@ -272,8 +272,21 @@ const Order = {
                 totalSale = parseFloat(document.getElementById("grandTotal")?.textContent.replace(/[$,]/g, "") || "0");
                 profit = parseFloat(document.getElementById("profitAmount")?.textContent.replace(/[$,]/g, "") || "0");
             }
-            App.state.order.forEach(o => totalWeight += o.qty * (Calculator.weight(o.item) || 0));
-            totalWeight = Number(totalWeight.toFixed(2));
+            // === CORRECT TOTAL WEIGHT USING FINAL PRODUCT WEIGHT FROM SEEDS ===
+            App.state.order.forEach(o => {
+                let itemWeight = Calculator.weight(o.item);
+
+                // If it's a crop final product (Corn, Wheat, etc.), use the finalWeight from seed data
+                if (App.state.seeds) {
+                    const seedData = Object.values(App.state.seeds).find(s => s.finalProduct === o.item);
+                    if (seedData?.finalWeight) {
+                        itemWeight = seedData.finalWeight;
+                    }
+                }
+
+                totalWeight += o.qty * itemWeight;
+            });
+            totalWeight = Number(totalWeight.toFixed(3)); // keep 3 decimals for accuracy
 
             // ──────── 4. GENERATE RECORD ────────
             const now = new Date();

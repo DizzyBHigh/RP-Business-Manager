@@ -440,8 +440,8 @@ const Crops = {
             ingredients: [...this.currentIngredients],
             yield: yieldQty,
             product: seedData.finalProduct,
-            totalCost: Number(totalCost.toFixed(2)),           // ← EXACT (e.g. 85.8)
-            costPerUnit: Number(totalCost / yieldQty).toFixed(2)     // ← EXACT (e.g. 0.0858)
+            totalCost: totalCost,
+            costPerUnit: totalCost / yieldQty    // ← EXACT (e.g. 0.0858)
         };
 
         App.state.harvests.unshift(harvest);
@@ -540,7 +540,7 @@ const Crops = {
             };
         }
 
-        // === ROUND EVERYTHING TO 2 DECIMALS FROM THE START ===
+        // USE RAW VALUES — NO ROUNDING EVER
         let totalCost = 0;
         let totalYield = 0;
 
@@ -549,19 +549,18 @@ const Crops = {
 
         relevant.forEach(h => {
             totalYield += h.yield;
-            totalCost += Number(h.totalCost.toFixed(2));  // ← ROUND HERE
+            totalCost += h.totalCost;  // ← THIS IS THE FIX (was Number(h.totalCost.toFixed(2)))
 
-            // Track usage per unit (rounded)
             seedUsage[h.seed] = (seedUsage[h.seed] || 0) + (h.seedsUsed / h.yield);
             h.ingredients.forEach(i => {
                 ingredientUsage[i.name] = (ingredientUsage[i.name] || 0) + (i.qty / h.yield);
             });
         });
 
-        const avgCostPerUnit = Number((totalCost / totalYield).toFixed(6));
-        const estimatedTotal = Number((avgCostPerUnit * desiredYield).toFixed(2));
+        const avgCostPerUnit = totalCost / totalYield;
+        const estimatedTotal = avgCostPerUnit * desiredYield;
 
-        // Estimate seeds & ingredients (rounded up)
+        // Round up seeds/ingredients for safety
         const estimatedSeeds = {};
         for (const [seed, perUnit] of Object.entries(seedUsage)) {
             const avg = perUnit / relevant.length;
@@ -576,12 +575,40 @@ const Crops = {
 
         return {
             costPerUnit: avgCostPerUnit,
-            totalCost: estimatedTotal,  // ← ALWAYS $85.80
+            totalCost: estimatedTotal,
             seedsNeeded: estimatedSeeds,
             ingredientsNeeded: estimatedIngredients,
             note: `Based on ${relevant.length} past harvest${relevant.length > 1 ? 's' : ''}`
         };
     },
+    // New pure function — uses current prices + current seed data
+    // EXACT cost to grow X units of a crop TODAY using average ingredient usage
+    calculateHarvestCostFromEstimate(productName, desiredYield) {
+        const harvests = (App.state.harvests || [])
+            .filter(h => h.product === productName && h.yield > 0)
+            .sort((a, b) => new Date(b.date) - new Date(a.date)); // newest first
+
+        if (harvests.length === 0) return 0;
+
+        const latest = harvests[0]; // use your most recent real harvest as template
+        const ratio = desiredYield / latest.yield;
+
+        let totalCost = 0;
+
+        // Seed cost — round up!
+        const seedsNeeded = Math.ceil(latest.seedsUsed * ratio);
+        const seedData = Object.values(App.state.seeds || {}).find(s => s.finalProduct === productName);
+        totalCost += seedsNeeded * (seedData?.price || 0);
+
+        // Ingredient costs — round up each one!
+        latest.ingredients.forEach(ing => {
+            const qtyNeeded = Math.ceil(ing.qty * ratio);
+            const price = Calculator.cost(ing.name);
+            totalCost += qtyNeeded * price;
+        });
+
+        return totalCost;
+    }
 };
 //Hide seed dropdown when clicking outside
 document.addEventListener('click', function (e) {
