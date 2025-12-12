@@ -795,760 +795,759 @@
     </div>
 
     <!-- Seeds Tab -->
-    <<!-- Seeds Tab -->
-        <div id="seeds" class="tab-content" style="display:none;">
-            <!-- Header with Add Button -->
+    <div id="seeds" class="tab-content" style="display:none;">
+        <!-- Header with Add Button -->
+        <div
+            style="background:var(--card); padding:20px; border-radius:12px; margin:20px 0; display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="color:var(--accent); margin:0;">Seeds Management</h3>
+            <button type="button" class="primary large" onclick="Crops.showAddForm()"
+                style="padding:12px 32px; font-size:18px;">
+                Add New Seed
+            </button>
+        </div>
+
+        <!-- ADD/EDIT FORM — HIDDEN BY DEFAULT -->
+        <div id="seedFormContainer"
+            style="display:none; background:var(--card); padding:20px; border-radius:12px; margin:20px 0;">
+            <h3 style="color:var(--accent); margin:0 0 20px; text-align:center;" id="seedFormTitle">
+                Add / Update Seed
+            </h3>
+
             <div
-                style="background:var(--card); padding:20px; border-radius:12px; margin:20px 0; display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="color:var(--accent); margin:0;">Seeds Management</h3>
-                <button type="button" class="primary large" onclick="Crops.showAddForm()"
-                    style="padding:12px 32px; font-size:18px;">
-                    Add New Seed
+                style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; max-width:1200px; margin:0 auto;">
+                <div style="flex:1 1 200px; min-width:180px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Seed Name</label>
+                    <input id="seedName" type="text" placeholder="e.g. Corn Seed"
+                        style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+
+                <div style="flex:1 1 200px; min-width:180px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Seed Weight (kg)</label>
+                    <input id="seedWeight" type="number" step="0.01" placeholder="0.10"
+                        style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+
+                <div style="flex:1 1 200px; min-width:180px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Seed Price ($)</label>
+                    <input id="seedPrice" type="number" step="0.01" placeholder="0.50"
+                        style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+
+                <div style="flex:1 1 200px; min-width:180px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Produce Name</label>
+                    <input id="finalProduct" type="text" placeholder="e.g. Corn"
+                        style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+
+                <div style="flex:1 1 200px; min-width:180px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Produce Weight (kg)</label>
+                    <input id="finalWeight" type="number" step="0.01" placeholder="1.00"
+                        style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+            </div>
+
+            <div style="text-align:center; margin-top:24px;">
+                <button type="button" class="danger" onclick="Crops.hideAddForm()"
+                    style="padding:12px 30px; margin-right:15px;">
+                    Cancel
+                </button>
+                <button type="button" class="success large" onclick="Crops.addSeed()"
+                    style="padding:14px 40px; font-size:18px;">
+                    Save Seed
                 </button>
             </div>
+        </div>
 
-            <!-- ADD/EDIT FORM — HIDDEN BY DEFAULT -->
-            <div id="seedFormContainer"
-                style="display:none; background:var(--card); padding:20px; border-radius:12px; margin:20px 0;">
-                <h3 style="color:var(--accent); margin:0 0 20px; text-align:center;" id="seedFormTitle">
-                    Add / Update Seed
-                </h3>
+        <!-- SEEDS TABLE -->
+        <div style="background:var(--card); padding:20px; border-radius:12px; margin:20px 0;">
+            <table style="width:100%; border-collapse:collapse;">
+                <thead style="background:#222;">
+                    <tr>
+                        <th style="padding:12px; text-align:left;">Seed</th>
+                        <th style="padding:12px; text-align:center;">Weight</th>
+                        <th style="padding:12px; text-align:center;">Stock</th>
+                        <th style="padding:12px; text-align:center;">Price</th>
+                        <th style="padding:12px; text-align:left;">→ Produce</th>
+                        <th style="padding:12px; text-align:center;">Weight</th>
+                        <th style="padding:12px; text-align:center;">Stock</th>
+                        <th style="padding:12px; text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="seedsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
 
-                <div
-                    style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; max-width:1200px; margin:0 auto;">
-                    <div style="flex:1 1 200px; min-width:180px;">
-                        <label style="display:block; margin-bottom:6px; color:#0af;">Seed Name</label>
-                        <input id="seedName" type="text" placeholder="e.g. Corn Seed"
-                            style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
-                    </div>
+    <!-- Harvests Tab -->
+    <div id="harvests" class="tab-content" style="display:none;">
+        <div style="background:var(--card); padding:20px; border-radius:12px; margin:20px 0;">
+            <h3 style="color:var(--accent); margin:0 0 20px; text-align:center;">Create Harvest</h3>
 
-                    <div style="flex:1 1 200px; min-width:180px;">
-                        <label style="display:block; margin-bottom:6px; color:#0af;">Seed Weight (kg)</label>
-                        <input id="seedWeight" type="number" step="0.01" placeholder="0.10"
-                            style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
-                    </div>
-
-                    <div style="flex:1 1 200px; min-width:180px;">
-                        <label style="display:block; margin-bottom:6px; color:#0af;">Seed Price ($)</label>
-                        <input id="seedPrice" type="number" step="0.01" placeholder="0.50"
-                            style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
-                    </div>
-
-                    <div style="flex:1 1 200px; min-width:180px;">
-                        <label style="display:block; margin-bottom:6px; color:#0af;">Produce Name</label>
-                        <input id="finalProduct" type="text" placeholder="e.g. Corn"
-                            style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
-                    </div>
-
-                    <div style="flex:1 1 200px; min-width:180px;">
-                        <label style="display:block; margin-bottom:6px; color:#0af;">Produce Weight (kg)</label>
-                        <input id="finalWeight" type="number" step="0.01" placeholder="1.00"
-                            style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+            <div
+                style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; max-width:1200px; margin:0 auto;">
+                <div style="flex:1 1 320px; min-width:280px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Select Seed</label>
+                    <div style="position:relative;">
+                        <input type="text" id="harvestSeedSearch" placeholder="Search seeds..." autocomplete="off"
+                            style="width:80%; padding:12px 40px 12px 12px; border-radius:8px; border:2px solid #333; background:#222; color:white; font-size:16px;"
+                            oninput="Crops.filterSeedDropdown(this.value)" onfocus="this.value=''">
+                        <div id="harvestSeedDropdown"
+                            style="display:none; position:absolute; top:100%; left:0; right:0; max-height:320px; overflow-y:auto; background:#111; border:2px solid var(--accent); border-top:none; border-radius:0 0 8px 8px; z-index:1000;">
+                            <!-- Filled by JS -->
+                        </div>
+                        <input type="hidden" id="harvestSeed" value=""> <!-- Keeps the actual selected value -->
                     </div>
                 </div>
 
-                <div style="text-align:center; margin-top:24px;">
-                    <button type="button" class="danger" onclick="Crops.hideAddForm()"
-                        style="padding:12px 30px; margin-right:15px;">
-                        Cancel
-                    </button>
-                    <button type="button" class="success large" onclick="Crops.addSeed()"
-                        style="padding:14px 40px; font-size:18px;">
-                        Save Seed
+                <div style="flex:1 1 200px; min-width:180px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Seeds to Plant</label>
+                    <input id="seedsToPlant" type="number" placeholder="e.g. 10"
+                        style=" padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+
+                <!-- SEARCHABLE INGREDIENT DROPDOWN -->
+                <div style="flex:1 1 200px; min-width:300px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Add Ingredient (Fertilizer, Water,
+                        etc.)</label>
+                    <div style="position:relative;">
+                        <input type="text" id="ingredientSearch" placeholder="Search ingredients..." autocomplete="off"
+                            style="width:80%; padding:12px 40px 12px 12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                        <div id="ingredientDropdown"
+                            style="display:none; position:absolute; top:100%; left:0; right:0; max-height:300px; overflow-y:auto; background:#111; border:2px solid var(--accent); border-top:none; border-radius:0 0 8px 8px; z-index:100;">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div style="flex:1 1 200px; min-width:150px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Quantity</label>
+                    <input id="ingredientQty" type="number" placeholder="e.g. 5"
+                        style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+
+                <div style="flex:1 1 200px; min-width:150px; display:flex; align-items:end;">
+                    <button type="button" class="primary" onclick="Crops.addIngredient()"
+                        style="padding:12px 20px; width:100%; height:48px;">
+                        Add Ingredient
                     </button>
                 </div>
             </div>
 
-            <!-- SEEDS TABLE -->
-            <div style="background:var(--card); padding:20px; border-radius:12px; margin:20px 0;">
+            <!-- Current Ingredients List -->
+            <div id="ingredientsList"
+                style="margin:20px 0; min-height:60px; padding:12px; background:#111; border-radius:8px; border:1px dashed #444;">
+                <em style="color:#666;">No ingredients added yet</em>
+            </div>
+
+            <div style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; margin-top:10px;">
+                <div style="flex:1 1 400px; min-width:280px;"></div>
+                <div style="flex:1 1 100px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Final Yield (e.g. 96)</label>
+                    <input id="harvestYield" type="number" placeholder="Total items harvested"
+                        style="padding:10px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+
+                </div>
+
+                <div style="flex:1 1 150px;  display:flex; align-items:end;">
+                    <button type="button" class="success large" onclick="Crops.completeHarvest()"
+                        style="font-size:18px; width:100%;">
+                        Complete Harvest
+                    </button>
+                </div>
+                <div style="flex:1 1 400px; min-width:280px;"></div>
+            </div>
+        </div>
+
+        <!-- Harvest History -->
+        <div style="background:var(--card); padding:20px; border-radius:12px; margin:20px 0;">
+            <h3 style="color:var(--accent); margin:0 0 16px;">Harvest History</h3>
+            <div style="overflow-x:auto;">
                 <table style="width:100%; border-collapse:collapse;">
-                    <thead style="background:#222;">
-                        <tr>
-                            <th style="padding:12px; text-align:left;">Seed</th>
-                            <th style="padding:12px; text-align:center;">Weight</th>
-                            <th style="padding:12px; text-align:center;">Stock</th>
-                            <th style="padding:12px; text-align:center;">Price</th>
-                            <th style="padding:12px; text-align:left;">→ Produce</th>
-                            <th style="padding:12px; text-align:center;">Weight</th>
-                            <th style="padding:12px; text-align:center;">Stock</th>
-                            <th style="padding:12px; text-align:center;">Actions</th>
+                    <thead>
+                        <tr style="background:#222;">
+                            <th>Date</th>
+                            <th>Seed</th>
+                            <th>Seeds Used</th>
+                            <th>Ingredients</th>
+                            <th>Yield</th>
+                            <th>Total Cost</th>
+                            <th>Cost/Unit</th>
                         </tr>
                     </thead>
-                    <tbody id="seedsTableBody"></tbody>
+                    <tbody id="harvestsTableBody"></tbody>
                 </table>
             </div>
         </div>
+    </div>
 
-        <!-- Harvests Tab -->
-        <div id="harvests" class="tab-content" style="display:none;">
-            <div style="background:var(--card); padding:20px; border-radius:12px; margin:20px 0;">
-                <h3 style="color:var(--accent); margin:0 0 20px; text-align:center;">Create Harvest</h3>
 
-                <div
-                    style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; max-width:1200px; margin:0 auto;">
-                    <div style="flex:1 1 320px; min-width:280px;">
-                        <label style="display:block; margin-bottom:6px; color:#0af;">Select Seed</label>
-                        <select id="harvestSeed"
-                            style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
-                            <option value="">Select Seed</option>
-                        </select>
-                    </div>
+    <!-- LEDGER TAB — NOW WITH MANUAL ADD/REMOVE MONEY -->
+    <div id="ledger" class="tab-content">
+        <h2>Business Ledger</h2>
+        <p style="color:#888;text-align:center;margin-bottom:20px;">All income & expenses • Running balance</p>
 
-                    <div style="flex:1 1 200px; min-width:180px;">
-                        <label style="display:block; margin-bottom:6px; color:#0af;">Seeds to Plant</label>
-                        <input id="seedsToPlant" type="number" placeholder="e.g. 10"
-                            style=" padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
-                    </div>
+        <!-- CURRENT BALANCE -->
+        <div style="background:var(--card);padding:16px;border-radius:8px;margin-bottom:20px;text-align:center;">
+            <strong style="font-size:24px;">Current Balance: <span id="currentBalance"
+                    style="color:var(--green);">$0.00</span></strong>
+        </div>
+        <div id="ledgerWeightSummary"
+            style="text-align:center;margin:15px 0;padding:12px;background:#002244;border-radius:8px;color:#0ff;font-weight:bold;">
+            Calculating weight flow...
+        </div>
 
-                    <!-- SEARCHABLE INGREDIENT DROPDOWN -->
-                    <div style="flex:1 1 200px; min-width:300px;">
-                        <label style="display:block; margin-bottom:6px; color:#0af;">Add Ingredient (Fertilizer, Water,
-                            etc.)</label>
-                        <div style="position:relative;">
-                            <input type="text" id="ingredientSearch" placeholder="Search ingredients..."
-                                autocomplete="off"
-                                style="width:80%; padding:12px 40px 12px 12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
-                            <div id="ingredientDropdown"
-                                style="display:none; position:absolute; top:100%; left:0; right:0; max-height:300px; overflow-y:auto; background:#111; border:2px solid var(--accent); border-top:none; border-radius:0 0 8px 8px; z-index:100;">
-                                <!-- Filled by JS -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="flex:1 1 200px; min-width:150px;">
-                        <label style="display:block; margin-bottom:6px; color:#0af;">Quantity</label>
-                        <input id="ingredientQty" type="number" placeholder="e.g. 5"
-                            style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
-                    </div>
-
-                    <div style="flex:1 1 200px; min-width:150px; display:flex; align-items:end;">
-                        <button type="button" class="primary" onclick="Crops.addIngredient()"
-                            style="padding:12px 20px; width:100%; height:48px;">
-                            Add Ingredient
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Current Ingredients List -->
-                <div id="ingredientsList"
-                    style="margin:20px 0; min-height:60px; padding:12px; background:#111; border-radius:8px; border:1px dashed #444;">
-                    <em style="color:#666;">No ingredients added yet</em>
-                </div>
-
-                <div style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; margin-top:10px;">
-                    <div style="flex:1 1 400px; min-width:280px;"></div>
-                    <div style="flex:1 1 100px;">
-                        <label style="display:block; margin-bottom:6px; color:#0af;">Final Yield (e.g. 96)</label>
-                        <input id="harvestYield" type="number" placeholder="Total items harvested"
-                            style="padding:10px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
-
-                    </div>
-
-                    <div style="flex:1 1 150px;  display:flex; align-items:end;">
-                        <button type="button" class="success large" onclick="Crops.completeHarvest()"
-                            style="font-size:18px; width:100%;">
-                            Complete Harvest
-                        </button>
-                    </div>
-                    <div style="flex:1 1 400px; min-width:280px;"></div>
+        <!-- ADD / REMOVE MONEY FORMS -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:30px;">
+            <!-- ADD MONEY -->
+            <div style="background:var(--card);padding:20px;border-radius:12px;border:2px solid var(--green);">
+                <h3 style="margin-top:0;color:var(--green);">Add Money (Income)</h3>
+                <div style="display:grid;gap:12px;">
+                    <input type="number" step="0.01" id="addAmount" placeholder="Amount ($)"
+                        style="padding:12px;font-size:16px;">
+                    <select id="addEmployee" style="padding:12px;font-size:16px;">
+                        <option value="">Select Employee (optional)</option>
+                    </select>
+                    <input type="text" id="addDesc" placeholder="Description (e.g. Cash tip, Refund, Owner injection)"
+                        style="padding:12px;font-size:16px;">
+                    <button class="success" style="padding:14px;font-size:18px;font-weight:bold;"
+                        onclick="LedgerManual.add()">
+                        ADD MONEY
+                    </button>
                 </div>
             </div>
 
-            <!-- Harvest History -->
-            <div style="background:var(--card); padding:20px; border-radius:12px; margin:20px 0;">
-                <h3 style="color:var(--accent); margin:0 0 16px;">Harvest History</h3>
-                <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse:collapse;">
-                        <thead>
-                            <tr style="background:#222;">
-                                <th>Date</th>
-                                <th>Seed</th>
-                                <th>Seeds Used</th>
-                                <th>Ingredients</th>
-                                <th>Yield</th>
-                                <th>Total Cost</th>
-                                <th>Cost/Unit</th>
-                            </tr>
-                        </thead>
-                        <tbody id="harvestsTableBody"></tbody>
-                    </table>
+            <!-- REMOVE MONEY -->
+            <div style="background:var(--card);padding:20px;border-radius:12px;border:2px solid var(--red);">
+                <h3 style="margin-top:0;color:var(--red);">Remove Money (Expense)</h3>
+                <div style="display:grid;gap:12px;">
+                    <input type="number" step="0.01" id="removeAmount" placeholder="Amount ($)"
+                        style="padding:12px;font-size:16px;">
+                    <select id="removeEmployee" style="padding:12px;font-size:16px;">
+                        <option value="">Select Employee (optional)</option>
+                    </select>
+                    <input type="text" id="removeDesc"
+                        placeholder="Description (e.g. Pay employee, Buy supplies, Owner withdrawal)"
+                        style="padding:12px;font-size:16px;">
+                    <button class="danger" style="padding:14px;font-size:18px;font-weight:bold;"
+                        onclick="LedgerManual.remove()">
+                        REMOVE MONEY
+                    </button>
                 </div>
             </div>
         </div>
 
-
-        <!-- LEDGER TAB — NOW WITH MANUAL ADD/REMOVE MONEY -->
-        <div id="ledger" class="tab-content">
-            <h2>Business Ledger</h2>
-            <p style="color:#888;text-align:center;margin-bottom:20px;">All income & expenses • Running balance</p>
-
-            <!-- CURRENT BALANCE -->
-            <div style="background:var(--card);padding:16px;border-radius:8px;margin-bottom:20px;text-align:center;">
-                <strong style="font-size:24px;">Current Balance: <span id="currentBalance"
-                        style="color:var(--green);">$0.00</span></strong>
-            </div>
-            <div id="ledgerWeightSummary"
-                style="text-align:center;margin:15px 0;padding:12px;background:#002244;border-radius:8px;color:#0ff;font-weight:bold;">
-                Calculating weight flow...
-            </div>
-
-            <!-- ADD / REMOVE MONEY FORMS -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:30px;">
-                <!-- ADD MONEY -->
-                <div style="background:var(--card);padding:20px;border-radius:12px;border:2px solid var(--green);">
-                    <h3 style="margin-top:0;color:var(--green);">Add Money (Income)</h3>
-                    <div style="display:grid;gap:12px;">
-                        <input type="number" step="0.01" id="addAmount" placeholder="Amount ($)"
-                            style="padding:12px;font-size:16px;">
-                        <select id="addEmployee" style="padding:12px;font-size:16px;">
-                            <option value="">Select Employee (optional)</option>
-                        </select>
-                        <input type="text" id="addDesc"
-                            placeholder="Description (e.g. Cash tip, Refund, Owner injection)"
-                            style="padding:12px;font-size:16px;">
-                        <button class="success" style="padding:14px;font-size:18px;font-weight:bold;"
-                            onclick="LedgerManual.add()">
-                            ADD MONEY
-                        </button>
-                    </div>
-                </div>
-
-                <!-- REMOVE MONEY -->
-                <div style="background:var(--card);padding:20px;border-radius:12px;border:2px solid var(--red);">
-                    <h3 style="margin-top:0;color:var(--red);">Remove Money (Expense)</h3>
-                    <div style="display:grid;gap:12px;">
-                        <input type="number" step="0.01" id="removeAmount" placeholder="Amount ($)"
-                            style="padding:12px;font-size:16px;">
-                        <select id="removeEmployee" style="padding:12px;font-size:16px;">
-                            <option value="">Select Employee (optional)</option>
-                        </select>
-                        <input type="text" id="removeDesc"
-                            placeholder="Description (e.g. Pay employee, Buy supplies, Owner withdrawal)"
-                            style="padding:12px;font-size:16px;">
-                        <button class="danger" style="padding:14px;font-size:18px;font-weight:bold;"
-                            onclick="LedgerManual.remove()">
-                            REMOVE MONEY
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- LEDGER FILTERS -->
+        <!-- LEDGER FILTERS -->
+        <div style="background:#001122; padding:18px; border-radius:12px; margin-bottom:20px; border:1px solid #0af;">
             <div
-                style="background:#001122; padding:18px; border-radius:12px; margin-bottom:20px; border:1px solid #0af;">
-                <div
-                    style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; align-items:end;">
+                style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:14px; align-items:end;">
 
-                    <div>
-                        <label style="color:#0ff; font-size:13px; display:block; margin-bottom:4px;">From Date</label>
-                        <input type="date" id="ledgerFrom"
-                            style="width:100%; padding:10px; background:#000; color:white; border:1px solid #0af; border-radius:8px;">
-                    </div>
+                <div>
+                    <label style="color:#0ff; font-size:13px; display:block; margin-bottom:4px;">From Date</label>
+                    <input type="date" id="ledgerFrom"
+                        style="width:100%; padding:10px; background:#000; color:white; border:1px solid #0af; border-radius:8px;">
+                </div>
 
-                    <div>
-                        <label style="color:#0ff; font-size:13px; display:block; margin-bottom:4px;">To Date</label>
-                        <input type="date" id="ledgerTo"
-                            style="width:100%; padding:10px; background:#000; color:white; border:1px solid #0af; border-radius:8px;">
-                    </div>
+                <div>
+                    <label style="color:#0ff; font-size:13px; display:block; margin-bottom:4px;">To Date</label>
+                    <input type="date" id="ledgerTo"
+                        style="width:100%; padding:10px; background:#000; color:white; border:1px solid #0af; border-radius:8px;">
+                </div>
 
-                    <div>
-                        <label style="color:#0ff; font-size:13px; display:block; margin-bottom:4px;">Employee</label>
-                        <select id="ledgerEmployee"
-                            style="width:100%; padding:10px; background:#000; color:white; border:1px solid #0af; border-radius:8px;">
-                            <option value="">All Employees</option>
-                        </select>
-                    </div>
+                <div>
+                    <label style="color:#0ff; font-size:13px; display:block; margin-bottom:4px;">Employee</label>
+                    <select id="ledgerEmployee"
+                        style="width:100%; padding:10px; background:#000; color:white; border:1px solid #0af; border-radius:8px;">
+                        <option value="">All Employees</option>
+                    </select>
+                </div>
 
-                    <div>
-                        <label style="color:#0ff; font-size:13px; display:block; margin-bottom:4px;">Search
-                            Description</label>
-                        <input type="text" id="ledgerSearch" placeholder="e.g. sale, purchase, restock..."
-                            style="width:100%; padding:10px; background:#000; color:white; border:1px solid #0af; border-radius:8px;">
-                    </div>
+                <div>
+                    <label style="color:#0ff; font-size:13px; display:block; margin-bottom:4px;">Search
+                        Description</label>
+                    <input type="text" id="ledgerSearch" placeholder="e.g. sale, purchase, restock..."
+                        style="width:100%; padding:10px; background:#000; color:white; border:1px solid #0af; border-radius:8px;">
+                </div>
 
-                    <div>
-                        <button onclick="Ledger.render()"
-                            style="padding:12px 24px; background:#00aa00; color:white; font-weight:bold; border:none; border-radius:8px; height:44px;">
-                            Apply Filters
-                        </button>
-                        <button onclick="Ledger.clearFilters()"
-                            style="padding:12px 20px; background:#444; color:white; border:none; border-radius:8px; margin-left:8px; height:44px;">
-                            Clear
-                        </button>
-                    </div>
+                <div>
+                    <button onclick="Ledger.render()"
+                        style="padding:12px 24px; background:#00aa00; color:white; font-weight:bold; border:none; border-radius:8px; height:44px;">
+                        Apply Filters
+                    </button>
+                    <button onclick="Ledger.clearFilters()"
+                        style="padding:12px 20px; background:#444; color:white; border:none; border-radius:8px; margin-left:8px; height:44px;">
+                        Clear
+                    </button>
                 </div>
             </div>
-            <!-- LEDGER TABLE -->
-            <table style="width:100%;font-size:14px;">
-                <thead style="background:var(--accent);color:white;">
-                    <tr>
-                        <th>Date</th>
-                        <th>ID</th>
-                        <th>Employee</th>
-                        <th>Description</th>
-                        <th style="text-align:right;">Amount</th>
-                        <th style="text-align:right;">Balance</th>
-                    </tr>
-                </thead>
-                <tbody id="ledgerBody"></tbody>
-            </table>
+        </div>
+        <!-- LEDGER TABLE -->
+        <table style="width:100%;font-size:14px;">
+            <thead style="background:var(--accent);color:white;">
+                <tr>
+                    <th>Date</th>
+                    <th>ID</th>
+                    <th>Employee</th>
+                    <th>Description</th>
+                    <th style="text-align:right;">Amount</th>
+                    <th style="text-align:right;">Balance</th>
+                </tr>
+            </thead>
+            <tbody id="ledgerBody"></tbody>
+        </table>
 
-            <div style="margin-top:20px;padding:20px;background:rgba(0,255,0,0.1);border-radius:8px;text-align:center;display:none;"
-                id="ledgerEmpty">
-                <em>No transactions recorded yet</em>
+        <div style="margin-top:20px;padding:20px;background:rgba(0,255,0,0.1);border-radius:8px;text-align:center;display:none;"
+            id="ledgerEmpty">
+            <em>No transactions recorded yet</em>
+        </div>
+    </div>
+
+    <!-- BUSINESS MANAGER TAB -->
+    <div id="business" class="tab-content">
+        <div class="page-header">
+            <h1>Business Manager</h1>
+            <p style="color:#888; text-align:center; margin-bottom:30px;">Configure your business identity and
+                security
+                settings</p>
+        </div>
+
+        <!-- BUSINESS INFO STATUS -->
+        <div id="businessStatus"
+            style="background:var(--card); padding:24px; border-radius:12px; border:2px solid var(--accent); margin-bottom:30px; text-align:center;">
+            <div id="businessStatusContent">
+                <h3 style="color:var(--accent); margin:0 0 15px 0;">Business Configuration</h3>
+                <div id="businessInfoDisplay" style="display:none;">
+                    <p><strong>Business Name:</strong> <span id="displayBusinessName"
+                            style="color:var(--green); font-size:18px;"></span></p>
+                    <p><strong>Tagline:</strong> <span id="displayBusinessTagline"
+                            style="color:#0af; font-style:italic;"></span></p>
+                    <p><strong>Security:</strong> <span id="displaySecurityStatus"
+                            style="color:var(--green); font-weight:bold;">🔒 Passphrase Protected</span></p>
+                    <button id="editBusinessBtn" class="primary" style="margin-top:15px; padding:10px 24px;">
+                        Edit Business Settings
+                    </button>
+                </div>
+                <div id="businessSetupForm" style="display:none;">
+                    <div style="max-width:600px; margin:0 auto;">
+                        <form>
+                            <div style="display:grid; grid-template-columns:1fr; gap:20px; margin-bottom:25px;">
+
+                                <!-- BUSINESS NAME -->
+                                <div>
+                                    <label
+                                        style="display:block; margin-bottom:8px; font-weight:bold; color:var(--accent); font-size:16px;">
+                                        Business Name
+                                    </label>
+                                    <input type="text" id="businessNameInput"
+                                        placeholder="e.g. Chip N Cheerful Lumber Co."
+                                        style="width:100%; padding:16px; font-size:18px; border-radius:12px; border:2px solid var(--border); background:var(--bg); color:var(--text);">
+                                    <small style="color:#0af; margin-top:5px; display:block;">This name will appear
+                                        on
+                                        all
+                                        invoices and reports</small>
+                                </div>
+
+                                <!-- BUSINESS TAGLINE -->
+                                <div>
+                                    <label
+                                        style="display:block; margin-bottom:8px; font-weight:bold; color:var(--accent); font-size:16px;">
+                                        Business Tagline
+                                    </label>
+                                    <input type="text" id="businessTaglineInput"
+                                        placeholder="e.g. Premium Handcrafted Goods • Delivered with Pride"
+                                        style="width:100%; padding:16px; font-size:18px; border-radius:12px; border:2px solid var(--border); background:var(--bg); color:var(--text);">
+                                    <small style="color:#0af; margin-top:5px; display:block;">Short motto that
+                                        appears
+                                        under
+                                        your business name</small>
+                                </div>
+
+                                <!-- BUSINESS PASSPHRASE -->
+                                <div>
+                                    <label
+                                        style="display:block; margin-bottom:8px; font-weight:bold; color:var(--accent); font-size:16px;">
+                                        Business Passphrase <span style="color:#ff6b6b; font-size:14px;">(Required
+                                            for
+                                            new
+                                            users)</span>
+                                    </label>
+                                    <div style="position:relative;">
+                                        <input type="password" id="businessPassphraseInput"
+                                            placeholder="Enter security passphrase"
+                                            style="width:100%; padding:16px 50px 16px 16px; font-size:18px; border-radius:12px; border:2px solid var(--border); background:var(--bg); color:var(--text);">
+                                        <button type="button" id="togglePassphrase"
+                                            style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text); cursor:pointer; font-size:18px;">
+                                            👁
+                                        </button>
+                                    </div>
+                                    <div
+                                        style="margin-top:10px; padding:12px; background:rgba(255,215,0,0.1); border-radius:8px; border-left:4px solid #ffd700;">
+                                        <strong>⚠️ Security Warning:</strong> Once set, <strong>ALL NEW
+                                            USERS</strong>
+                                        must
+                                        enter this passphrase to access the app.
+                                        Existing users will continue to work normally.
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div style="text-align:center; margin-top:30px;">
+                                <button id="saveBusinessBtn" type="button" class="success"
+                                    style="padding:16px 50px; font-size:20px; font-weight:bold; border-radius:12px; margin-right:15px;">
+                                    💾 Save Business Configuration
+                                </button>
+                                <button id="cancelBusinessBtn" class="danger"
+                                    style="padding:16px 50px; font-size:20px; font-weight:bold; border-radius:12px;">
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- BUSINESS MANAGER TAB -->
-        <div id="business" class="tab-content">
-            <div class="page-header">
-                <h1>Business Manager</h1>
-                <p style="color:#888; text-align:center; margin-bottom:30px;">Configure your business identity and
-                    security
-                    settings</p>
-            </div>
+        <!-- PASSPHRASE MANAGEMENT -->
+        <div id="passphraseManagement"
+            style="display:none; background:#1a1a2e; padding:24px; border-radius:12px; border:2px solid #ff6b6b; margin-bottom:30px;">
+            <h3 style="color:#ff6b6b; margin-top:0; display:flex; align-items:center; gap:10px;">
+                🔐 Passphrase Management
+            </h3>
+            <p style="color:#aaa; margin-bottom:25px;">Manage access for your team</p>
 
-            <!-- BUSINESS INFO STATUS -->
-            <div id="businessStatus"
-                style="background:var(--card); padding:24px; border-radius:12px; border:2px solid var(--accent); margin-bottom:30px; text-align:center;">
-                <div id="businessStatusContent">
-                    <h3 style="color:var(--accent); margin:0 0 15px 0;">Business Configuration</h3>
-                    <div id="businessInfoDisplay" style="display:none;">
-                        <p><strong>Business Name:</strong> <span id="displayBusinessName"
-                                style="color:var(--green); font-size:18px;"></span></p>
-                        <p><strong>Tagline:</strong> <span id="displayBusinessTagline"
-                                style="color:#0af; font-style:italic;"></span></p>
-                        <p><strong>Security:</strong> <span id="displaySecurityStatus"
-                                style="color:var(--green); font-weight:bold;">🔒 Passphrase Protected</span></p>
-                        <button id="editBusinessBtn" class="primary" style="margin-top:15px; padding:10px 24px;">
-                            Edit Business Settings
-                        </button>
-                    </div>
-                    <div id="businessSetupForm" style="display:none;">
-                        <div style="max-width:600px; margin:0 auto;">
-                            <form>
-                                <div style="display:grid; grid-template-columns:1fr; gap:20px; margin-bottom:25px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px;">
 
-                                    <!-- BUSINESS NAME -->
-                                    <div>
-                                        <label
-                                            style="display:block; margin-bottom:8px; font-weight:bold; color:var(--accent); font-size:16px;">
-                                            Business Name
-                                        </label>
-                                        <input type="text" id="businessNameInput"
-                                            placeholder="e.g. Chip N Cheerful Lumber Co."
-                                            style="width:100%; padding:16px; font-size:18px; border-radius:12px; border:2px solid var(--border); background:var(--bg); color:var(--text);">
-                                        <small style="color:#0af; margin-top:5px; display:block;">This name will appear
-                                            on
-                                            all
-                                            invoices and reports</small>
-                                    </div>
-
-                                    <!-- BUSINESS TAGLINE -->
-                                    <div>
-                                        <label
-                                            style="display:block; margin-bottom:8px; font-weight:bold; color:var(--accent); font-size:16px;">
-                                            Business Tagline
-                                        </label>
-                                        <input type="text" id="businessTaglineInput"
-                                            placeholder="e.g. Premium Handcrafted Goods • Delivered with Pride"
-                                            style="width:100%; padding:16px; font-size:18px; border-radius:12px; border:2px solid var(--border); background:var(--bg); color:var(--text);">
-                                        <small style="color:#0af; margin-top:5px; display:block;">Short motto that
-                                            appears
-                                            under
-                                            your business name</small>
-                                    </div>
-
-                                    <!-- BUSINESS PASSPHRASE -->
-                                    <div>
-                                        <label
-                                            style="display:block; margin-bottom:8px; font-weight:bold; color:var(--accent); font-size:16px;">
-                                            Business Passphrase <span style="color:#ff6b6b; font-size:14px;">(Required
-                                                for
-                                                new
-                                                users)</span>
-                                        </label>
-                                        <div style="position:relative;">
-                                            <input type="password" id="businessPassphraseInput"
-                                                placeholder="Enter security passphrase"
-                                                style="width:100%; padding:16px 50px 16px 16px; font-size:18px; border-radius:12px; border:2px solid var(--border); background:var(--bg); color:var(--text);">
-                                            <button type="button" id="togglePassphrase"
-                                                style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text); cursor:pointer; font-size:18px;">
-                                                👁
-                                            </button>
-                                        </div>
-                                        <div
-                                            style="margin-top:10px; padding:12px; background:rgba(255,215,0,0.1); border-radius:8px; border-left:4px solid #ffd700;">
-                                            <strong>⚠️ Security Warning:</strong> Once set, <strong>ALL NEW
-                                                USERS</strong>
-                                            must
-                                            enter this passphrase to access the app.
-                                            Existing users will continue to work normally.
-                                        </div>
-                                    </div>
-
-                                </div>
-
-                                <div style="text-align:center; margin-top:30px;">
-                                    <button id="saveBusinessBtn" type="button" class="success"
-                                        style="padding:16px 50px; font-size:20px; font-weight:bold; border-radius:12px; margin-right:15px;">
-                                        💾 Save Business Configuration
-                                    </button>
-                                    <button id="cancelBusinessBtn" class="danger"
-                                        style="padding:16px 50px; font-size:20px; font-weight:bold; border-radius:12px;">
-                                        Cancel
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- PASSPHRASE MANAGEMENT -->
-            <div id="passphraseManagement"
-                style="display:none; background:#1a1a2e; padding:24px; border-radius:12px; border:2px solid #ff6b6b; margin-bottom:30px;">
-                <h3 style="color:#ff6b6b; margin-top:0; display:flex; align-items:center; gap:10px;">
-                    🔐 Passphrase Management
-                </h3>
-                <p style="color:#aaa; margin-bottom:25px;">Manage access for your team</p>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px;">
-
-                    <!-- CHANGE PASSPHRASE -->
+                <!-- CHANGE PASSPHRASE -->
+                <div
+                    style="background:#1e0a0a; padding:24px; border-radius:12px; border:2px solid #cc0000; position:relative; overflow:hidden;">
                     <div
-                        style="background:#1e0a0a; padding:24px; border-radius:12px; border:2px solid #cc0000; position:relative; overflow:hidden;">
-                        <div
-                            style="position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg, #ff6b6b, #cc0000, #ff6b6b);">
-                        </div>
-                        <h4 style="color:#ff6b6b; margin:0 0 18px 0; font-size:16px; font-weight:600;">Change Passphrase
-                        </h4>
+                        style="position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg, #ff6b6b, #cc0000, #ff6b6b);">
+                    </div>
+                    <h4 style="color:#ff6b6b; margin:0 0 18px 0; font-size:16px; font-weight:600;">Change Passphrase
+                    </h4>
 
-                        <div style="margin-bottom:16px;">
-                            <label
-                                style="display:block; margin-bottom:8px; color:#ddd; font-size:14px; font-weight:500;">New
-                                Passphrase</label>
-                            <input type="password" id="newPassphraseInput"
-                                placeholder="Enter new passphrase (min 6 characters)" style="
+                    <div style="margin-bottom:16px;">
+                        <label
+                            style="display:block; margin-bottom:8px; color:#ddd; font-size:14px; font-weight:500;">New
+                            Passphrase</label>
+                        <input type="password" id="newPassphraseInput"
+                            placeholder="Enter new passphrase (min 6 characters)" style="
               width:100%; padding:14px 16px; font-size:16px; 
               border-radius:8px; border:2px solid #4a0a0a; 
               background:#2a0a0a; color:#fff; 
               box-sizing:border-box; outline:none;
               transition: all 0.3s ease;">
-                        </div>
+                    </div>
 
-                        <div style="margin-bottom:20px;">
-                            <label
-                                style="display:block; margin-bottom:8px; color:#ddd; font-size:14px; font-weight:500;">Confirm
-                                Passphrase</label>
-                            <input type="password" id="confirmPassphraseInput" placeholder="Confirm new passphrase"
-                                style="
+                    <div style="margin-bottom:20px;">
+                        <label
+                            style="display:block; margin-bottom:8px; color:#ddd; font-size:14px; font-weight:500;">Confirm
+                            Passphrase</label>
+                        <input type="password" id="confirmPassphraseInput" placeholder="Confirm new passphrase" style="
               width:100%; padding:14px 16px; font-size:16px; 
               border-radius:8px; border:2px solid #4a0a0a; 
               background:#2a0a0a; color:#fff; 
               box-sizing:border-box; outline:none;
               transition: all 0.3s ease;">
-                        </div>
+                    </div>
 
-                        <button id="changePassphraseBtn" class="warning" style="
+                    <button id="changePassphraseBtn" class="warning" style="
                   width:100%; padding:14px 20px; font-size:16px; font-weight:600; 
                   background:linear-gradient(135deg, #ff6b6b, #cc0000); 
                   color:white; border:none; border-radius:8px; cursor:pointer; 
                   box-shadow:0 4px 15px rgba(255,107,107,0.3);
                   transition: all 0.3s ease;">
-                            🔄 Update Passphrase
-                        </button>
+                        🔄 Update Passphrase
+                    </button>
+                </div>
+
+                <!-- DISABLE PASSPHRASE -->
+                <div
+                    style="background:#0a1e0a; padding:24px; border-radius:12px; border:2px solid #28a745; position:relative; overflow:hidden;">
+                    <div
+                        style="position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg, #28a745, #20c997, #28a745);">
+                    </div>
+                    <h4 style="color:#28a745; margin:0 0 18px 0; font-size:16px; font-weight:600;">Disable Security
+                    </h4>
+
+                    <p style="color:#aaa; margin-bottom:18px; font-size:14px; line-height:1.4;">
+                        Remove passphrase protection <br>
+                        <span style="color:#ffaa00; font-weight:500;">(Not recommended for production)</span>
+                    </p>
+
+                    <div
+                        style="background:#1a2a1a; padding:12px; border-radius:8px; border-left:3px solid #ffaa00; margin-bottom:18px;">
+                        <small style="color:#ccc; font-size:13px;">
+                            ⚠️ This will allow anyone with the link to access your business data
+                        </small>
                     </div>
 
-                    <!-- DISABLE PASSPHRASE -->
-                    <div
-                        style="background:#0a1e0a; padding:24px; border-radius:12px; border:2px solid #28a745; position:relative; overflow:hidden;">
-                        <div
-                            style="position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg, #28a745, #20c997, #28a745);">
-                        </div>
-                        <h4 style="color:#28a745; margin:0 0 18px 0; font-size:16px; font-weight:600;">Disable Security
-                        </h4>
-
-                        <p style="color:#aaa; margin-bottom:18px; font-size:14px; line-height:1.4;">
-                            Remove passphrase protection <br>
-                            <span style="color:#ffaa00; font-weight:500;">(Not recommended for production)</span>
-                        </p>
-
-                        <div
-                            style="background:#1a2a1a; padding:12px; border-radius:8px; border-left:3px solid #ffaa00; margin-bottom:18px;">
-                            <small style="color:#ccc; font-size:13px;">
-                                ⚠️ This will allow anyone with the link to access your business data
-                            </small>
-                        </div>
-
-                        <button id="disablePassphraseBtn" class="danger" style="
+                    <button id="disablePassphraseBtn" class="danger" style="
                   width:100%; padding:14px 20px; font-size:16px; font-weight:600; 
                   background:linear-gradient(135deg, #dc3545, #c82333); 
                   color:white; border:none; border-radius:8px; cursor:pointer; 
                   box-shadow:0 4px 15px rgba(220,53,69,0.3);
                   transition: all 0.3s ease;">
-                            🚫 Disable Passphrase Protection
-                        </button>
-                    </div>
+                        🚫 Disable Passphrase Protection
+                    </button>
                 </div>
-            </div>
-
-            <!-- USERS WAITING FOR APPROVAL -->
-            <div id="pendingUsersSection"
-                style="display:none; background:var(--card); padding:24px; border-radius:12px; margin-top:30px;">
-                <h3 style="color:var(--accent); margin-top:0;">👥 Users Awaiting Approval</h3>
-                <p style="color:#aaa;">New users who entered the correct passphrase but need manager approval</p>
-
-                <div id="pendingUsersList" style="margin-top:20px;">
-                    <!-- Dynamic content -->
-                </div>
-            </div>
-
-            <!-- SUCCESS MESSAGES -->
-            <div id="businessSuccessMsg"
-                style="display:none; padding:20px; background:rgba(0,200,0,0.2); border:2px solid var(--green); border-radius:12px; text-align:center; margin-top:20px;">
-                <h3 style="color:var(--green); margin:0 0 10px 0;">✅ Configuration Saved Successfully!</h3>
-                <p id="successMessageText"></p>
             </div>
         </div>
 
-        <!-- Rolls Manager -->
-        <div id="roles" class="tab-content">
-            <h2>Roles & Permissions</h2>
-            <div style="background:var(--card);padding:20px;border-radius:12px;margin:20px 0;">
-                <h3>Assign Role to Employee</h3>
-                <select id="roleEmployeeSelect" style="padding:10px;font-size:16px;"></select>
-                <select id="roleLevelSelect" style="padding:10px;font-size:16px;margin-left:10px;">
-                    <option value="manager">Manager (Full Access)</option>
-                    <option value="assistant">Assistant (Most Access)</option>
-                    <option value="worker">Worker (Limited)</option>
-                    <option value="viewer">Viewer (Read Only)</option>
-                </select>
-                <button class="success" onclick="RolesManager.assign()"
-                    style="padding:10px 20px;margin-left:10px;">Assign
-                    Role</button>
+        <!-- USERS WAITING FOR APPROVAL -->
+        <div id="pendingUsersSection"
+            style="display:none; background:var(--card); padding:24px; border-radius:12px; margin-top:30px;">
+            <h3 style="color:var(--accent); margin-top:0;">👥 Users Awaiting Approval</h3>
+            <p style="color:#aaa;">New users who entered the correct passphrase but need manager approval</p>
+
+            <div id="pendingUsersList" style="margin-top:20px;">
+                <!-- Dynamic content -->
             </div>
-
-            <h3>Current Team</h3>
-            <div id="rolesList"></div>
-
-            <div id="permissionsEditor" style="margin-top:40px;"></div>
         </div>
 
+        <!-- SUCCESS MESSAGES -->
+        <div id="businessSuccessMsg"
+            style="display:none; padding:20px; background:rgba(0,200,0,0.2); border:2px solid var(--green); border-radius:12px; text-align:center; margin-top:20px;">
+            <h3 style="color:var(--green); margin:0 0 10px 0;">✅ Configuration Saved Successfully!</h3>
+            <p id="successMessageText"></p>
+        </div>
+    </div>
 
-        <div id="sync" class="tab-content">
-            <h2>Full Data Control Center</h2>
-            <p style="text-align:center;color:#888;margin-bottom:20px;">
-                Export • Import • Delete any data — total empire control
+    <!-- Rolls Manager -->
+    <div id="roles" class="tab-content">
+        <h2>Roles & Permissions</h2>
+        <div style="background:var(--card);padding:20px;border-radius:12px;margin:20px 0;">
+            <h3>Assign Role to Employee</h3>
+            <select id="roleEmployeeSelect" style="padding:10px;font-size:16px;"></select>
+            <select id="roleLevelSelect" style="padding:10px;font-size:16px;margin-left:10px;">
+                <option value="manager">Manager (Full Access)</option>
+                <option value="assistant">Assistant (Most Access)</option>
+                <option value="worker">Worker (Limited)</option>
+                <option value="viewer">Viewer (Read Only)</option>
+            </select>
+            <button class="success" onclick="RolesManager.assign()" style="padding:10px 20px;margin-left:10px;">Assign
+                Role</button>
+        </div>
+
+        <h3>Current Team</h3>
+        <div id="rolesList"></div>
+
+        <div id="permissionsEditor" style="margin-top:40px;"></div>
+    </div>
+
+
+    <div id="sync" class="tab-content">
+        <h2>Full Data Control Center</h2>
+        <p style="text-align:center;color:#888;margin-bottom:20px;">
+            Export • Import • Delete any data — total empire control
+        </p>
+
+        <!-- EXPORT -->
+        <div class="sync-box">
+            <h3>Export Selected Data</h3>
+            <div class="sync-checkboxes">
+                <label><input type="checkbox" id="exp_prices" checked> Custom Prices</label>
+                <label><input type="checkbox" id="exp_recipes" checked> Crafting Recipes</label>
+                <label><input type="checkbox" id="exp_raw" checked> Raw Material Prices</label>
+                <label><input type="checkbox" id="exp_categories" checked> Item Categories</label>
+                <label><input type="checkbox" id="exp_hidden" checked> Hidden from Price List</label>
+                <label><input type="checkbox" id="exp_employees" checked> Employees & Commission Rates</label>
+                <label><input type="checkbox" id="exp_shopstock" checked> Shop Display Stock</label>
+                <label><input type="checkbox" id="exp_warehousestock" checked> Warehouse Stock</label>
+                <label><input type="checkbox" id="exp_ledger" checked> Financial Ledger</label>
+                <label><input type="checkbox" id="exp_orders" checked> Completed Customer Orders</label>
+                <label><input type="checkbox" id="exp_minstock" checked> Minimum Stock Alerts</label>
+                <label><input type="checkbox" id="exp_ocr" checked> OCR Auto-Corrections</label>
+            </div>
+            <button class="success" onclick="Sync.exportSelected()" style="padding:14px 40px; font-size:18px;">
+                EXPORT SELECTED → COPY TO CLIPBOARD
+            </button>
+            <textarea id="exportBox" rows="16" readonly placeholder="Your encrypted empire backup will appear here..."
+                style="width:100%;margin:10px 0;font-family:monospace;font-size:11px;background:#000;color:#0ff;border:1px solid #0ff;"></textarea>
+        </div>
+
+        <!-- IMPORT -->
+        <div class="sync-box">
+            <h3>Import Selected Data</h3>
+            <p><strong>Warning:</strong> This merges/updates selected data (safe & smart)</p>
+            <div class="sync-checkboxes">
+                <label><input type="checkbox" id="imp_prices" checked> Custom Prices</label>
+                <label><input type="checkbox" id="imp_recipes" checked> Crafting Recipes</label>
+                <label><input type="checkbox" id="imp_raw" checked> Raw Material Prices</label>
+                <label><input type="checkbox" id="imp_categories" checked> Item Categories</label>
+                <label><input type="checkbox" id="imp_hidden" checked> Hidden from Price List</label>
+                <label><input type="checkbox" id="imp_employees" checked> Employees & Commission Rates</label>
+                <label><input type="checkbox" id="imp_shopstock" checked> Shop Display Stock</label>
+                <label><input type="checkbox" id="imp_warehousestock" checked> Warehouse Stock</label>
+                <label><input type="checkbox" id="imp_ledger" checked> Financial Ledger</label>
+                <label><input type="checkbox" id="imp_orders" checked> Completed Customer Orders</label>
+                <label><input type="checkbox" id="imp_minstock" checked> Minimum Stock Alerts</label>
+                <label><input type="checkbox" id="imp_ocr" checked> OCR Auto-Corrections</label>
+            </div>
+            <textarea id="importBox" rows="16" placeholder="Paste your backup JSON here..."
+                style="width:100%;margin:10px 0;font-family:monospace;font-size:11px;"></textarea>
+            <button class="primary" onclick="Sync.importSelected()">IMPORT SELECTED DATA</button>
+            <p id="importStatus" style="margin-top:10px;font-weight:bold;color:var(--accent);"></p>
+        </div>
+
+        <!-- DANGER ZONE: CLEAR DATA -->
+        <div class="sync-box" style="border:3px solid var(--red); background:rgba(220,20,60,0.15);">
+            <h3 style="color:var(--red); margin-top:0;">DANGER ZONE — PERMANENT DELETE</h3>
+            <p style="color:var(--red);font-weight:bold;">
+                This will delete selected data FOREVER<br>
+                A full backup will be copied to your clipboard automatically
             </p>
-
-            <!-- EXPORT -->
-            <div class="sync-box">
-                <h3>Export Selected Data</h3>
-                <div class="sync-checkboxes">
-                    <label><input type="checkbox" id="exp_prices" checked> Custom Prices</label>
-                    <label><input type="checkbox" id="exp_recipes" checked> Crafting Recipes</label>
-                    <label><input type="checkbox" id="exp_raw" checked> Raw Material Prices</label>
-                    <label><input type="checkbox" id="exp_categories" checked> Item Categories</label>
-                    <label><input type="checkbox" id="exp_hidden" checked> Hidden from Price List</label>
-                    <label><input type="checkbox" id="exp_employees" checked> Employees & Commission Rates</label>
-                    <label><input type="checkbox" id="exp_shopstock" checked> Shop Display Stock</label>
-                    <label><input type="checkbox" id="exp_warehousestock" checked> Warehouse Stock</label>
-                    <label><input type="checkbox" id="exp_ledger" checked> Financial Ledger</label>
-                    <label><input type="checkbox" id="exp_orders" checked> Completed Customer Orders</label>
-                    <label><input type="checkbox" id="exp_minstock" checked> Minimum Stock Alerts</label>
-                    <label><input type="checkbox" id="exp_ocr" checked> OCR Auto-Corrections</label>
-                </div>
-                <button class="success" onclick="Sync.exportSelected()" style="padding:14px 40px; font-size:18px;">
-                    EXPORT SELECTED → COPY TO CLIPBOARD
-                </button>
-                <textarea id="exportBox" rows="16" readonly
-                    placeholder="Your encrypted empire backup will appear here..."
-                    style="width:100%;margin:10px 0;font-family:monospace;font-size:11px;background:#000;color:#0ff;border:1px solid #0ff;"></textarea>
+            <div class="sync-checkboxes">
+                <label><input type="checkbox" id="clr_prices"> Custom Prices</label>
+                <label><input type="checkbox" id="clr_recipes"> Crafting Recipes</label>
+                <label><input type="checkbox" id="clr_raw"> Raw Material Prices</label>
+                <label><input type="checkbox" id="clr_categories"> Item Categories</label>
+                <label><input type="checkbox" id="clr_hidden"> Hidden from Price List</label>
+                <label><input type="checkbox" id="clr_employees"> Employees & Rates</label>
+                <label><input type="checkbox" id="clr_shopstock"> Shop Stock</label>
+                <label><input type="checkbox" id="clr_warehousestock"> Warehouse Stock</label>
+                <label><input type="checkbox" id="clr_ledger"> Financial Ledger</label>
+                <label><input type="checkbox" id="clr_orders"> Completed Orders</label>
+                <label><input type="checkbox" id="clr_minstock"> Min Stock Alerts</label>
+                <label><input type="checkbox" id="clr_ocr"> OCR Corrections</label>
             </div>
-
-            <!-- IMPORT -->
-            <div class="sync-box">
-                <h3>Import Selected Data</h3>
-                <p><strong>Warning:</strong> This merges/updates selected data (safe & smart)</p>
-                <div class="sync-checkboxes">
-                    <label><input type="checkbox" id="imp_prices" checked> Custom Prices</label>
-                    <label><input type="checkbox" id="imp_recipes" checked> Crafting Recipes</label>
-                    <label><input type="checkbox" id="imp_raw" checked> Raw Material Prices</label>
-                    <label><input type="checkbox" id="imp_categories" checked> Item Categories</label>
-                    <label><input type="checkbox" id="imp_hidden" checked> Hidden from Price List</label>
-                    <label><input type="checkbox" id="imp_employees" checked> Employees & Commission Rates</label>
-                    <label><input type="checkbox" id="imp_shopstock" checked> Shop Display Stock</label>
-                    <label><input type="checkbox" id="imp_warehousestock" checked> Warehouse Stock</label>
-                    <label><input type="checkbox" id="imp_ledger" checked> Financial Ledger</label>
-                    <label><input type="checkbox" id="imp_orders" checked> Completed Customer Orders</label>
-                    <label><input type="checkbox" id="imp_minstock" checked> Minimum Stock Alerts</label>
-                    <label><input type="checkbox" id="imp_ocr" checked> OCR Auto-Corrections</label>
-                </div>
-                <textarea id="importBox" rows="16" placeholder="Paste your backup JSON here..."
-                    style="width:100%;margin:10px 0;font-family:monospace;font-size:11px;"></textarea>
-                <button class="primary" onclick="Sync.importSelected()">IMPORT SELECTED DATA</button>
-                <p id="importStatus" style="margin-top:10px;font-weight:bold;color:var(--accent);"></p>
-            </div>
-
-            <!-- DANGER ZONE: CLEAR DATA -->
-            <div class="sync-box" style="border:3px solid var(--red); background:rgba(220,20,60,0.15);">
-                <h3 style="color:var(--red); margin-top:0;">DANGER ZONE — PERMANENT DELETE</h3>
-                <p style="color:var(--red);font-weight:bold;">
-                    This will delete selected data FOREVER<br>
-                    A full backup will be copied to your clipboard automatically
-                </p>
-                <div class="sync-checkboxes">
-                    <label><input type="checkbox" id="clr_prices"> Custom Prices</label>
-                    <label><input type="checkbox" id="clr_recipes"> Crafting Recipes</label>
-                    <label><input type="checkbox" id="clr_raw"> Raw Material Prices</label>
-                    <label><input type="checkbox" id="clr_categories"> Item Categories</label>
-                    <label><input type="checkbox" id="clr_hidden"> Hidden from Price List</label>
-                    <label><input type="checkbox" id="clr_employees"> Employees & Rates</label>
-                    <label><input type="checkbox" id="clr_shopstock"> Shop Stock</label>
-                    <label><input type="checkbox" id="clr_warehousestock"> Warehouse Stock</label>
-                    <label><input type="checkbox" id="clr_ledger"> Financial Ledger</label>
-                    <label><input type="checkbox" id="clr_orders"> Completed Orders</label>
-                    <label><input type="checkbox" id="clr_minstock"> Min Stock Alerts</label>
-                    <label><input type="checkbox" id="clr_ocr"> OCR Corrections</label>
-                </div>
-                <button class="danger" onclick="Sync.clearSelected()"
-                    style="padding:16px 50px; font-size:19px; font-weight:bold; margin-top:10px;">
-                    DELETE SELECTED DATA FOREVER
-                </button>
-                <p id="clearStatus" style="margin-top:12px; font-weight:bold; font-size:15px;"></p>
-            </div>
+            <button class="danger" onclick="Sync.clearSelected()"
+                style="padding:16px 50px; font-size:19px; font-weight:bold; margin-top:10px;">
+                DELETE SELECTED DATA FOREVER
+            </button>
+            <p id="clearStatus" style="margin-top:12px; font-weight:bold; font-size:15px;"></p>
         </div>
+    </div>
 
-        </div>
-        <link rel="stylesheet" href="assets/css/style.css">
-        <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
-        <!-- Firebase SDK v9 compat (works with your existing firebase.firestore() code) -->
-        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-        <script>
+    </div>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
+    <!-- Firebase SDK v9 compat (works with your existing firebase.firestore() code) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
 
-            /* // ──────────────────────────────
-            // DARK MODE TOGGLE — BULLETPROOF & NAMESPACED
-            // ──────────────────────────────
-            const darkToggle = document.getElementById("darkToggle");
-    
-            function updateToggleButton() {
-                if (!darkToggle) return;
-                darkToggle.textContent = document.body.classList.contains("light")
-                    ? "Dark Mode"
-                    : "Light Mode";
+        /* // ──────────────────────────────
+        // DARK MODE TOGGLE — BULLETPROOF & NAMESPACED
+        // ──────────────────────────────
+        const darkToggle = document.getElementById("darkToggle");
+ 
+        function updateToggleButton() {
+            if (!darkToggle) return;
+            darkToggle.textContent = document.body.classList.contains("light")
+                ? "Dark Mode"
+                : "Light Mode";
+        }
+ 
+        // Load theme and apply on startup — safely wrapped in async IIFE
+        (async () => {
+            const savedTheme = await ls.get("cnc_theme", "dark"); // default = dark
+ 
+            if (savedTheme === "light") {
+                document.body.classList.add("light");
+            } else {
+                document.body.classList.remove("light");
             }
-    
-            // Load theme and apply on startup — safely wrapped in async IIFE
-            (async () => {
-                const savedTheme = await ls.get("cnc_theme", "dark"); // default = dark
-    
-                if (savedTheme === "light") {
-                    document.body.classList.add("light");
-                } else {
-                    document.body.classList.remove("light");
-                }
-    
-                updateToggleButton();
-            })(); */
+ 
+            updateToggleButton();
+        })(); */
 
-            // Toggle handler — now safe and async
-            /* darkToggle?.addEventListener("click", async () => {
-                document.body.classList.toggle("light");
-    
-                const isLight = document.body.classList.contains("light");
-                await ls.set("cnc_theme", isLight ? "light" : "dark");
-    
-                updateToggleButton();
-            }); */
+        // Toggle handler — now safe and async
+        /* darkToggle?.addEventListener("click", async () => {
+            document.body.classList.toggle("light");
+ 
+            const isLight = document.body.classList.contains("light");
+            await ls.set("cnc_theme", isLight ? "light" : "dark");
+ 
+            updateToggleButton();
+        }); */
 
-            //updateToggleButton();
+        //updateToggleButton();
 
 
-            const UI_PREFS = [
-                "currentEmployee",
-                "currentCustomer",
-                "lastTab",
-                "lastSection",
-                "orderMode",
-                "craftingPreferences",
-                "sidebarCollapsed"
-                // "darkMode" → no longer needed — we use "cnc_theme" directly
-            ];
+        const UI_PREFS = [
+            "currentEmployee",
+            "currentCustomer",
+            "lastTab",
+            "lastSection",
+            "orderMode",
+            "craftingPreferences",
+            "sidebarCollapsed"
+            // "darkMode" → no longer needed — we use "cnc_theme" directly
+        ];
 
-            // ========================
-            // Item Search
-            // ========================
-            document.getElementById("itemSearch").addEventListener("input", e => {
-                const val = e.target.value.toLowerCase().trim();
-                const opts = document.getElementById("itemOptions");
-                opts.innerHTML = "";
-                opts.style.display = val ? "block" : "none";
-                if (!val) return;
+        // ========================
+        // Item Search
+        // ========================
+        document.getElementById("itemSearch").addEventListener("input", e => {
+            const val = e.target.value.toLowerCase().trim();
+            const opts = document.getElementById("itemOptions");
+            opts.innerHTML = "";
+            opts.style.display = val ? "block" : "none";
+            if (!val) return;
 
-                const cats = {
-                    Raw: Object.keys(App.state.rawPrice),
-                    Crafted: Object.keys(App.state.recipes)
-                };
+            const cats = {
+                Raw: Object.keys(App.state.rawPrice),
+                Crafted: Object.keys(App.state.recipes)
+            };
 
-                Object.entries(cats).forEach(([cat, items]) => {
-                    const matches = items.filter(i => i.toLowerCase().includes(val));
-                    if (matches.length) {
-                        // Add category header
-                        const catDiv = document.createElement("div");
-                        catDiv.className = "category";
-                        catDiv.textContent = cat;
-                        opts.appendChild(catDiv);
+            Object.entries(cats).forEach(([cat, items]) => {
+                const matches = items.filter(i => i.toLowerCase().includes(val));
+                if (matches.length) {
+                    // Add category header
+                    const catDiv = document.createElement("div");
+                    catDiv.className = "category";
+                    catDiv.textContent = cat;
+                    opts.appendChild(catDiv);
 
-                        // Add each matching item
-                        matches.forEach(item => {
-                            const div = document.createElement("div");
-                            div.className = "category-item";
-                            div.textContent = item;
-                            div.onclick = () => {
-                                document.getElementById("itemSearch").value = item;
-                                opts.style.display = "none";
-                            };
+                    // Add each matching item
+                    matches.forEach(item => {
+                        const div = document.createElement("div");
+                        div.className = "category-item";
+                        div.textContent = item;
+                        div.onclick = () => {
+                            document.getElementById("itemSearch").value = item;
+                            opts.style.display = "none";
+                        };
 
-                            opts.appendChild(div);
-                        });
-                    }
-                });
-            });
-
-            // =============================================
-            // Hide menu dropdown when clicking elsewhere
-            // =============================================
-            document.addEventListener("click", e => {
-                const searchBox = document.getElementById("itemSearch");
-                const opts = document.getElementById("itemOptions");
-                if (!searchBox.contains(e.target) && !opts.contains(e.target)) {
-                    opts.style.display = "none";
+                        opts.appendChild(div);
+                    });
                 }
             });
+        });
 
-        </script>
-        <script src="js/firebaseconfig.js"></script>
-        <script src="js/firebase.js"></script>
-        <script src="js/storage.js"></script>
-        <script src="js/app.js"></script>
-        <script src="js/businessSetup.js"></script>
-        <script src="js/utils.js"></script>
-        <script src="js/calculator.js"></script>
-        <script src="js/order.js"></script>
-        <script src="js/inventory.js"></script>
-        <script src="js/ledger.js"></script>
-        <script src="js/priceList.js"></script>
-        <script src="js/employees.js"></script>
-        <script src="js/rawMaterials.js"></script>
-        <script src="js/recipes.js"></script>
-        <script src="js/categories.js"></script>
-        <script src="js/shopsales.js"></script>
-        <script src="js/crops.js"></script>
-        <script src="js/sync.js"></script>
+        // =============================================
+        // Hide menu dropdown when clicking elsewhere
+        // =============================================
+        document.addEventListener("click", e => {
+            const searchBox = document.getElementById("itemSearch");
+            const opts = document.getElementById("itemOptions");
+            if (!searchBox.contains(e.target) && !opts.contains(e.target)) {
+                opts.style.display = "none";
+            }
+        });
+
+    </script>
+    <script src="js/firebaseconfig.js"></script>
+    <script src="js/firebase.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/businessSetup.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/calculator.js"></script>
+    <script src="js/order.js"></script>
+    <script src="js/inventory.js"></script>
+    <script src="js/ledger.js"></script>
+    <script src="js/priceList.js"></script>
+    <script src="js/employees.js"></script>
+    <script src="js/rawMaterials.js"></script>
+    <script src="js/recipes.js"></script>
+    <script src="js/categories.js"></script>
+    <script src="js/shopsales.js"></script>
+    <script src="js/crops.js"></script>
+    <script src="js/sync.js"></script>
 
 
 

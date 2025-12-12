@@ -262,7 +262,55 @@ const Crops = {
         document.getElementById('ingredientQty').focus();
     },
 
+    filterSeedDropdown(query) {
+        const dropdown = document.getElementById('harvestSeedDropdown');
+        const hiddenInput = document.getElementById('harvestSeed');
 
+        if (!dropdown) return;
+
+        query = query.toLowerCase().trim();
+
+        if (query === "") {
+            dropdown.style.display = "none";
+            hiddenInput.value = "";
+            return;
+        }
+
+        const seeds = Object.entries(App.state.seeds || {})
+            .map(([name, data]) => ({ name, product: data.finalProduct || "" }))
+            .filter(s => s.name.toLowerCase().includes(query) || s.product.toLowerCase().includes(query))
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        if (seeds.length === 0) {
+            dropdown.innerHTML = `<div style="padding:12px; color:#888; text-align:center;">No seeds found</div>`;
+        } else {
+            dropdown.innerHTML = seeds.map(seed => `
+                <div onclick="Crops.selectHarvestSeed('${seed.name}')" 
+                     style="padding:12px; cursor:pointer; border-bottom:1px solid #333; background:#1a1a1a;"
+                     onmouseover="this.style.background='#333'" 
+                     onmouseout="this.style.background='#1a1a1a'">
+                    <strong>${seed.name}</strong> → ${seed.product}
+                </div>
+            `).join('');
+        }
+
+        dropdown.style.display = "block";
+    },
+
+    selectHarvestSeed(seedName) {
+        const searchInput = document.getElementById('harvestSeedSearch');
+        const hiddenInput = document.getElementById('harvestSeed');
+        const dropdown = document.getElementById('harvestSeedDropdown');
+
+        const product = App.state.seeds[seedName]?.finalProduct || "";
+
+        searchInput.value = `${seedName} → ${product}`;
+        hiddenInput.value = seedName;
+        dropdown.style.display = "none";
+
+        // Optional: focus next field
+        document.getElementById('seedsToPlant')?.focus();
+    },
 
     // Populate dropdowns for Harvests tab
     populateDropdowns() {
@@ -479,8 +527,13 @@ const Crops = {
         tbody.innerHTML = html || '<tr><td colspan="7" style="text-align:center; color:#888; padding:40px;">No harvests recorded yet</td></tr>';
     }
 };
-
-
+//Hide seed dropdown when clicking outside
+document.addEventListener('click', function (e) {
+    const container = document.querySelector('#harvestSeedSearch')?.parentElement;
+    if (container && !container.contains(e.target)) {
+        document.getElementById('harvestSeedDropdown')?.style.setProperty('display', 'none');
+    }
+});
 
 // Expose globally (matching your pattern)
 window.Crops = Crops;
