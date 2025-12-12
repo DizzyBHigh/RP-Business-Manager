@@ -2,104 +2,284 @@
 // Raw Materials Manager / Editor
 // =================================
 const RawMaterials = {
-    // PURCHASE RAW MATERIALS — FULLY WORKING + WEIGHT
-    async purchase() {
-        const name = document.getElementById("purchaseItemSearch").value.trim();
-        const qty = parseInt(document.getElementById("purchaseQty").value) || 0;
-        const totalPaid = document.getElementById("purchasePrice").value !== ""
-            ? parseFloat(document.getElementById("purchasePrice").value)
-            : null;
-        const supplier = document.getElementById("purchaseSupplier").value.trim() || "Unknown";
-        const employee = document.getElementById("purchaseEmployee").value || App.state.currentEmployee || "Manager";
+    addPurchaseLine() {
+        const container = document.getElementById("purchaseLines");
 
-        if (!name) return showToast("fail", "Please select or enter a raw material.");
-        if (qty <= 0) return showToast("fail", "Quantity must be at least 1.");
+        const line = document.createElement("div");
+        line.className = "purchase-line";
+        line.style = "display:grid; grid-template-columns:3.5fr 1fr 1.5fr 1.5fr 1.2fr auto; gap:14px; align-items:center; margin-bottom:14px; padding:8px 0;";
 
-        const rawData = App.state.rawPrice[name];
-        if (!rawData || typeof rawData !== 'object') {
-            return showToast("fail", `"${name}" is not in Raw Prices!\nAdd it first in the Raw Prices tab.`);
+        line.innerHTML = `
+            <!-- ITEM SEARCH -->
+            <div style="position:relative;">
+                <input type="text" class="item-search" placeholder="Search item..." 
+                       style="width:80%; padding:14px 16px; font-size:16px; background:#001122; border:1px solid #0af; border-radius:8px; color:white;">
+                <div class="search-results" 
+                     style="display:none; position:absolute; top:100%; left:0; right:0; background:#000; border:1px solid #0af; border-top:none; max-height:200px; overflow-y:auto; z-index:10; border-radius:0 0 8px 8px;">
+                </div>
+            </div>
+    
+            <!-- QTY -->
+            <input type="number" class="qty-input" placeholder="Qty" min="1" value="1"
+                   style="padding:14px; font-size:16px; background:#001122; border:1px solid #0af; border-radius:8px; text-align:center;">
+    
+            <!-- PRICE PER UNIT (default active) -->
+            <input type="number" step="0.01" class="price-input active-input" placeholder="Price/unit"
+                   style="padding:14px; font-size:16px; background:#002200; border:1px solid #0f8; border-radius:8px; color:#0f8; font-weight:bold;">
+    
+            <!-- TOTAL PRICE (read-only until clicked) -->
+            <input type="number" step="0.01" class="total-input" placeholder="Total" readonly
+                   style="padding:14px; font-size:16px; background:#001122; border:1px solid #444; border-radius:8px; color:#0af; font-weight:bold;">
+    
+            <!-- LINE TOTAL DISPLAY -->
+            <div style="text-align:right; font-weight:bold; color:#0f8; font-size:20px; white-space:nowrap;" class="line-total">
+                $0.00
+            </div>
+    
+            <!-- REMOVE BUTTON -->
+            <button type="button" class="danger small" 
+                    onclick="this.closest('.purchase-line').remove(); RawMaterials.updateMultiTotal()"
+                    style="padding:14px 18px; font-size:20px; font-weight:bold; border-radius:8px;">
+                Remove
+            </button>
+        `;
+
+        container.appendChild(line);
+
+        // Focus the new item field
+        line.querySelector(".item-search").focus();
+
+        // Re-attach all listeners
+        this.setupSearchListeners();
+        this.setupFieldSwitching();
+        this.updateMultiTotal();
+    },
+
+    // Update total whenever anything changes
+    updateMultiTotal() {
+        let grandTotal = 0;
+
+        document.querySelectorAll(".purchase-line").forEach(line => {
+            const qty = parseFloat(line.querySelector(".qty-input").value) || 0;
+            const priceInput = line.querySelector(".price-input");
+            const totalInput = line.querySelector(".total-input");
+            const lineTotalEl = line.querySelector(".line-total");
+
+            let pricePer = parseFloat(priceInput.value) || 0;
+            let totalPrice = parseFloat(totalInput.value) || 0;
+
+            let lineTotal = 0;
+
+            if (priceInput.classList.contains("active-input") && qty > 0) {
+                // Price per unit is being edited
+                lineTotal = pricePer * qty;
+                totalInput.value = lineTotal > 0 ? lineTotal.toFixed(2) : "";
+            } else if (totalInput.classList.contains("active-input") && qty > 0) {
+                // Total price is being edited
+                lineTotal = totalPrice;
+                pricePer = qty > 0 ? (totalPrice / qty) : 0;
+                priceInput.value = pricePer > 0 ? pricePer.toFixed(4) : "";
+            } else if (pricePer > 0 && qty > 0) {
+                lineTotal = pricePer * qty;
+                totalInput.value = lineTotal.toFixed(2);
+            } else if (totalPrice > 0 && qty > 0) {
+                lineTotal = totalPrice;
+                pricePer = totalPrice / qty;
+                priceInput.value = pricePer.toFixed(4);
+            }
+
+            lineTotalEl.textContent = "$" + lineTotal.toFixed(2);
+            grandTotal += lineTotal;
+        });
+
+        document.getElementById("multiTotalDisplay").textContent = "$" + grandTotal.toFixed(2);
+    },
+
+    // Make clicking the field switch which one is editable
+    setupFieldSwitching() {
+        document.querySelectorAll(".purchase-line").forEach(line => {
+            const priceInput = line.querySelector(".price-input");
+            const totalInput = line.querySelector(".total-input");
+
+            priceInput.onclick = () => {
+                priceInput.classList.add("active-input");
+                priceInput.removeAttribute("readonly");
+                priceInput.style.background = "#002200";
+
+                totalInput.classList.remove("active-input");
+                totalInput.setAttribute("readonly", true);
+                totalInput.style.background = "#001122";
+            };
+
+            totalInput.onclick = () => {
+                totalInput.classList.add("active-input");
+                totalInput.removeAttribute("readonly");
+                totalInput.style.background = "#002200";
+
+                priceInput.classList.remove("active-input");
+                priceInput.setAttribute("readonly", true);
+                priceInput.style.background = "#001122";
+            };
+
+            // Default: price per unit is active
+            priceInput.classList.add("active-input");
+            totalInput.setAttribute("readonly", true);
+        });
+    },
+
+    // MAIN MULTI PURCHASE
+    async multiPurchase() {
+        const lines = document.querySelectorAll(".purchase-line");
+        if (lines.length === 0) return showToast("fail", "Add at least one item");
+
+        const supplier = document.getElementById("multiSupplier").value.trim() || "Unknown";
+        const employee = App.state.currentEmployee || "Manager";
+
+        let totalCost = 0;
+        const purchases = [];
+
+        for (const line of lines) {
+            const searchInput = line.querySelector(".item-search");
+            const name = searchInput.value.trim();
+            const qty = parseInt(line.querySelector(".qty-input").value) || 0;
+            const pricePer = parseFloat(line.querySelector(".price-input").value) || 0;
+
+            if (!name || qty <= 0 || pricePer <= 0) {
+                return showToast("fail", "All lines must have item, qty > 0 and price > 0");
+            }
+
+            if (!App.state.rawPrice[name] && !App.state.recipes[name]) {
+                return showToast("fail", `"${name}" not found in Raw Materials or Recipes`);
+            }
+
+            const cost = qty * pricePer;
+            totalCost += cost;
+
+            purchases.push({ name, qty, pricePer, cost });
+
+            // Add to warehouse
+            App.state.warehouseStock[name] = (App.state.warehouseStock[name] || 0) + qty;
         }
 
-        const basePrice = rawData.price ?? 0;
-        const weightPerUnit = rawData.weight ?? 0;
-        const unitPrice = totalPaid !== null ? (totalPaid / qty) : basePrice;
-        const totalCost = totalPaid !== null ? totalPaid : (basePrice * qty);
-        const totalWeight = qty * weightPerUnit;
+        const ok = await showConfirm(`
+            CONFIRM MULTI-PURCHASE
+            
+            ${purchases.map(p => `• ${p.qty}× ${p.name} @ $${p.pricePer.toFixed(2)} = $${p.cost.toFixed(2)}`).join('\n')}
+            
+            TOTAL: $${totalCost.toFixed(2)}
+            Supplier: ${supplier}
+        `);
 
-        if (basePrice === 0 && totalPaid === null) {
-            return showToast("fail", `No price set for "${name}"!\nEnter Total Paid or set a default price first.`);
-        }
-
-        let preview = `PURCHASE CONFIRMATION\n\n`;
-        preview += `${qty} × ${name}\n`;
-        if (weightPerUnit > 0) preview += `Weight: ${weightPerUnit}kg each → ${totalWeight.toFixed(2)}kg total\n`;
-        preview += `Price: $${unitPrice.toFixed(2)}/unit → Total: $${totalCost.toFixed(2)}\n`;
-        preview += `Supplier: ${supplier}\n`;
-        preview += `Employee: ${employee}`;
-
-        const ok = await showConfirm(preview);
         if (!ok) return;
 
-        // THIS WAS THE MISSING LINE — ADD TO WAREHOUSE STOCK!
-        App.state.warehouseStock[name] = (App.state.warehouseStock[name] || 0) + qty;
+        // Save all stock
+        await App.save("warehouseStock");
 
-        const now = new Date();
+        // Single ledger entry
         const record = {
-            id: "RAW-" + now.getTime().toString().slice(-6),
-            date: now.toISOString().slice(0, 10),
-            timestamp: now.toISOString(),
+            id: "RAW-" + Date.now().toString().slice(-8),
+            date: new Date().toISOString().slice(0, 10),
+            timestamp: new Date().toISOString(),
             type: "raw_purchase",
             employee,
-            item: name,
-            qty,
-            unitPrice,
-            totalCost,
-            weightPerUnit,
-            totalWeight: parseFloat(totalWeight.toFixed(2)),
             supplier,
-            description: `Purchased ${qty}× ${name} from ${supplier}\n${totalWeight.toFixed(2)}kg @ $${unitPrice.toFixed(2)}/ea = $${totalCost.toFixed(2)}`
+            description: `Multi-purchase from ${supplier}: ${purchases.map(p => `${p.qty}×${p.name}`).join(", ")}`,
+            totalCost,
+            amount: -totalCost,
+            items: purchases.map(p => `${p.qty}× ${p.name} @ $${p.pricePer.toFixed(2)}`).join(" | ")
         };
 
         App.state.ledger.push(record);
+        await App.save("ledger");
 
-        // Save BOTH ledger AND warehouse stock
-        await Promise.all([
-            App.save("ledger"),
-            App.save("warehouseStock")
-        ]);
+        showToast("success", `Purchased ${purchases.length} items for $${totalCost.toFixed(2)}`);
 
-        // Success message
-        const successMsg = document.getElementById("purchaseSuccess");
-        successMsg.innerHTML = `
-          <div style="text-align:center;padding:20px;background:#001a00;border:2px solid #0f0;border-radius:8px;">
-            <h3 style="color:#0f8;margin:0;">PURCHASE COMPLETE</h3>
-            <div style="margin:10px 0;font-size:18px;">
-              <strong>${qty} × ${name}</strong>
+        // Reset form
+        document.getElementById("multiPurchaseForm").style.display = "none";
+        document.getElementById("showMultiPurchaseBtn").style.display = "block";
+        document.getElementById("multiSupplier").value = "";
+
+        // Clear all lines except first
+        document.getElementById("purchaseLines").innerHTML = `
+            <div class="purchase-line" style="display:grid; grid-template-columns:3fr 1fr 2fr 1fr auto; gap:12px; align-items:end; margin-bottom:12px;">
+                <div>
+                    <input type="text" class="item-search" placeholder="Search item..." style="width:100%; padding:12px; font-size:16px;">
+                    <div class="search-results" style="display:none; position:absolute; background:#000; border:1px solid #0af; max-height:200px; overflow-y:auto; z-index:10;"></div>
+                </div>
+                <input type="number" class="qty-input" placeholder="Qty" min="1" value="1" style="padding:12px; font-size:16px;">
+                <input type="number" step="0.01" class="price-input" placeholder="Price per unit" style="padding:12px; font-size:16px;">
+                <div style="text-align:right; font-weight:bold; color:#0f8;" class="line-total">$0.00</div>
+                <button type="button" class="danger small" onclick="this.closest('.purchase-line').remove(); RawMaterials.updateMultiTotal()">×</button>
             </div>
-            <div style="color:#0af;">
-              Total Weight: <strong>${totalWeight.toFixed(2)} kg</strong>
-            </div>
-            <div style="color:#ff0;">
-              Total Cost: <strong>$${totalCost.toFixed(2)}</strong>
-            </div>
-            <div style="margin-top:8px;color:#888;">
-              Added to warehouse • Ledger updated
-            </div>
-          </div>
         `;
-        successMsg.style.display = "block";
-        setTimeout(() => successMsg.style.display = "none", 5000);
 
-        // Clear form
-        document.getElementById("purchaseItemSearch").value = "";
-        document.getElementById("purchaseQty").value = "1";
-        document.getElementById("purchasePrice").value = "";
-        document.getElementById("purchaseSupplier").value = "";
+        this.setupSearchListeners();
+        this.updateMultiTotal();
 
-        // Refresh displays
         Inventory.render();
         Ledger.render();
         debouncedCalcRun();
+    },
+
+    hideMultiForm() {
+        document.getElementById("multiPurchaseForm").style.display = "none";
+        document.getElementById("showMultiPurchaseBtn").style.display = "block";
+    },
+
+    setupSearchListeners() {
+        document.querySelectorAll(".item-search").forEach(input => {
+            input.oninput = (e) => {
+                const val = e.target.value.toLowerCase();
+                const results = input.parentElement.querySelector(".search-results");
+                results.innerHTML = "";
+
+                if (!val) {
+                    results.style.display = "none";
+                    return;
+                }
+
+                const allItems = [
+                    ...Object.keys(App.state.rawPrice || {}),
+                    ...Object.keys(App.state.recipes || {})
+                ].filter(n => n.toLowerCase().includes(val)).slice(0, 15);
+
+                allItems.forEach(name => {
+                    const div = document.createElement("div");
+                    div.textContent = name;
+                    div.style.padding = "10px 16px";
+                    div.style.cursor = "pointer";
+                    div.style.borderBottom = "1px solid #333";
+                    div.onclick = () => {
+                        input.value = name;
+                        results.style.display = "none";
+                        input.closest(".purchase-line").querySelector(".qty-input").focus();
+                        RawMaterials.updateMultiTotal();
+                    };
+                    results.appendChild(div);
+                });
+
+                results.style.display = allItems.length ? "block" : "none";
+            };
+
+            input.onblur = () => setTimeout(() => results.style.display = "none", 200);
+        });
+
+        // Live recalc on ANY input change
+        document.querySelectorAll(".qty-input, .price-input, .total-input").forEach(el => {
+            el.oninput = () => RawMaterials.updateMultiTotal();
+        });
+    },
+
+    init() {
+        document.getElementById("showMultiPurchaseBtn").onclick = () => {
+            document.getElementById("multiPurchaseForm").style.display = "block";
+            document.getElementById("showMultiPurchaseBtn").style.display = "none";
+            document.querySelector(".item-search").focus();
+        };
+
+        this.setupSearchListeners();
+        this.setupFieldSwitching();
+        this.updateMultiTotal();
     },
 
     // ADD NEW RAW MATERIAL — BULLETPROOF
@@ -378,4 +558,8 @@ document.getElementById("rawTable")?.addEventListener("focusout", function (e) {
     setTimeout(() => {
         input.style.background = ""; // back to normal
     }, 400);
+});
+document.addEventListener("DOMContentLoaded", () => {
+
+    RawMaterials.init();
 });
