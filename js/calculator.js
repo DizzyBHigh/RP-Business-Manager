@@ -79,61 +79,130 @@ const Calculator = {
         const stock = App.state.warehouseStock[item] || 0;
         const needed = qty;
         const canUseStock = !isRaw && stock >= needed;
-        const userChoice = Calculator.liveToggle[key] ?? "craft";  // ← default to craft
+        const userChoice = Calculator.liveToggle[key] ?? "craft";
 
-        const itemWeight = this.weight(item);
+        // === CROP DETECTION ===
+        const isCrop = App.state.seeds && Object.values(App.state.seeds).some(s => s.finalProduct === item);
+        const cropKey = `crop→${key}`;
+        const cropChoice = Calculator.liveToggle[cropKey] ?? (canUseStock ? "warehouse" : "grow");
+
+        let itemWeight = this.weight(item);
+        if (isCrop) {
+            const seedData = Object.values(App.state.seeds || {}).find(s => s.finalProduct === item);
+            if (seedData?.finalWeight) {
+                itemWeight = seedData.finalWeight; // e.g. 1.0kg per Corn
+            }
+        }
         const totalWeight = (qty * itemWeight).toFixed(3);
 
-        let header = `<div class="tree-item" style="margin-left:${depth * 24}px;display:flex;align-items:center;gap:8px;position:relative;">`;
+        let html = `<div class="tree-item" style="margin-left:${depth * 24}px;display:flex;align-items:center;gap:8px;position:relative;">`;
 
-        // Remove button for top-level order items
+        // Remove button (only on order root items)
         if (depth === 0 && orderIndex !== null) {
-            header += `<button onclick="removeOrderItemDirectly(${orderIndex})" style="background:#c00;color:white;border:none;padding:2px 8px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;" title="Remove from order">×</button>`;
+            html += `<button onclick="removeOrderItemDirectly(${orderIndex})" style="background:#c00;color:white;border:none;padding:2px 8px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;" title="Remove from order">×</button>`;
         }
 
-        // ────────────────── UNIFIED DROPDOWN (top-level + sub-items) ──────────────────
+        // === CROP: Grow vs Warehouse Dropdown ===
+        if (isCrop) {
+            html += `
+                <select style="font-size:12px;padding:2px;border-radius:4px;background:#000;color:white;border:1px solid #444;"
+                        onchange="Calculator.liveToggle['${cropKey}']=this.value; debouncedCalcRun();">
+                    <option value="warehouse" ${cropChoice === "warehouse" ? "selected" : ""}>Use Warehouse (${stock})</option>
+                    <option value="grow" ${cropChoice === "grow" ? "selected" : ""}>Grow (Harvest)</option>
+                </select>`;
+        }
+        // Normal crafting dropdown
+        else if (!isRaw) {
+            const label = depth === 0 ? `Use Warehouse (${stock} in stock)` : `Use Warehouse (${stock})`;
+            html += `
+                <select style="font-size:12px;padding:2px;border-radius:4px;background:#000;color:white;border:1px solid #444;"
+                        onchange="Calculator.liveToggle['${key}']=this.value; debouncedCalcRun();">
+                    <option value="craft"${userChoice !== "warehouse" ? " selected" : ""}>Craft</option>
+                    ${canUseStock ? `<option value="warehouse"${userChoice === "warehouse" ? " selected" : ""}>${label}</option>` : ""}
+                </select>`;
+        }
+
+        // === MAIN ITEM LINE WITH CORRECT PRICE ===
+        let topLevelCost = 0;
+
+        if (isCrop) {
+            if (cropChoice === "grow") {
+                topLevelCost = Crops.calculateHarvestCostFromEstimate(item, qty);
+            } else {
+                topLevelCost = Crops.getAverageCostPerUnit(item) * qty;
+            }
+        } else if (userChoice !== "warehouse") {
+            topLevelCost = this.cost(item) * qty;
+        }
+
+        const costDisplay = topLevelCost > 0
+            ? `<strong style="color:#0f8; margin-left:12px; font-size:16px;">$${topLevelCost.toFixed(2)}</strong>`
+            : '<span style="color:#666; margin-left:12px;">—</span>';
+
+        html += `<strong style="color:var(--accent);">${qty} × ${item}</strong>`;
+        html += ` <small style="color:#0af;font-weight:bold;">(${totalWeight}kg)</small>`;
+        html += costDisplay;
+
         if (!isRaw) {
-            const stockLabel = depth === 0
-                ? `Use Warehouse (${stock} in stock)`
-                : `Use Warehouse (${stock})`;
-
-            header += `
-                        <select style="font-size:12px;padding:2px;border-radius:4px;background:#000;color:white;border:1px solid #444;"
-                                onchange="Calculator.liveToggle['${key}']=this.value; debouncedCalcRun();">
-                            <option value="craft"${userChoice !== "warehouse" ? " selected" : ""}>Craft</option>
-                            ${canUseStock ? `<option value="warehouse"${userChoice === "warehouse" ? " selected" : ""}>${stockLabel}</option>` : ""}
-                        </select>`;
-        }
-        // ─────────────────────────────────────────────────────────────────────────────
-
-        header += `<strong style="color:var(--accent);">${qty} × ${item}</strong>`;
-
-        const weightColor = itemWeight > 0 ? "#0af" : "#666";
-        header += ` <small style="color:${weightColor};font-weight:bold;">(${itemWeight.toFixed(3)}kg each → ${totalWeight}kg)</small>`;
-
-        if (!isRaw) {
-            const batches = Math.ceil(qty / (r.y || 1));
-            header += ` <small style="color:#888;">(${batches} batch${batches > 1 ? "es" : ""})</small>`;
+            const batches = Math.ceil(qty / (r?.y || 1));
+            html += ` <small style="color:#888;">(${batches} batch${batches > 1 ? "es" : ""})</small>`;
         }
 
-        const cost = this.cost(item) * qty;
-        if (userChoice !== "warehouse" && cost > 0) {
-            header += ` <small style="color:#888;">($${cost.toFixed(2)})</small>`;
+        html += `</div>`;
+
+        // === GROW (HARVEST) DETAILED BOX ===
+        if (isCrop && cropChoice === "grow" && qty > 0) {
+            const estimate = Crops.getHarvestEstimate(item, qty);
+            const exactCost = Crops.calculateHarvestCostFromEstimate(item, qty);
+
+            html += `
+            <div style="margin:${depth > 0 ? '12px 0 16px' : '16px 0 20px'} ${depth * 28}px; padding:14px 18px; background:#001a0f; border-left:5px solid #00ff88; border-radius:8px; font-size:14px; line-height:1.5;">
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <strong style="color:#00ff88; font-size:16px;">Grow (Harvest)</strong>
+                    <strong style="color:#0ff; font-size:18px;">${qty}× ${item}</strong>
+                </div>
+        
+                <div style="background:rgba(0,255,136,0.15); padding:10px 14px; border-radius:6px; margin:10px 0; border:1px solid rgba(0,255,136,0.3);">
+                    <div style="color:#0ff; font-size:13px; margin-bottom:4px;">Exact Cost Today</div>
+                    <div style="color:#00ff88; font-weight:bold; font-size:24px;">
+                        $${exactCost.toFixed(2)}
+                        <span style="font-size:14px; color:#0af; margin-left:8px;">
+                            ($${(exactCost / qty).toFixed(4)}/unit)
+                        </span>
+                    </div>
+                </div>
+        
+                <div style="color:#ccc; font-size:13px;">
+                    ${Object.keys(estimate.seedsNeeded || {}).length ?
+                    `<strong style="color:#ffeb3b">Seeds:</strong> ${Object.entries(estimate.seedsNeeded).map(([s, q]) => `${q}×${s}`).join(', ')}` : ''}
+                    ${Object.keys(estimate.seedsNeeded || {}).length && Object.keys(estimate.ingredientsNeeded || {}).length ? '<br>' : ''}
+                    ${Object.keys(estimate.ingredientsNeeded || {}).length ?
+                    `<strong style="color:#ff9800">Ingredients:</strong> ${Object.entries(estimate.ingredientsNeeded).map(([i, q]) => `${q}×${i}`).join(', ')}` : ''}
+                </div>
+        
+                <div style="margin-top:12px; text-align:center; font-size:15px; color:#0f8; font-weight:bold;">
+                    Total Harvest Cost: $${exactCost.toFixed(2)}
+                </div>
+            </div>`;
+
+            return html;
         }
 
-        header += `</div>`;
-
-        // If user chose warehouse and we have enough → show "using from warehouse"
-        if (userChoice === "warehouse" && canUseStock) {
-            return header + `<div class="tree" style="margin-left:${(depth + 1) * 24}px;color:#0f8;font-style:italic;padding:4px 0;">
-                        Using ${needed} × ${item} from warehouse (${totalWeight}kg)
-                    </div>`;
+        // === WAREHOUSE STOCK MESSAGE ===
+        if ((isCrop && cropChoice === "warehouse") || (!isCrop && userChoice === "warehouse")) {
+            if (canUseStock) {
+                return html + `<div style="margin-left:${(depth + 1) * 24}px;color:#0f8;font-style:italic;padding:6px 0;">
+                    Using ${needed} × ${item} from warehouse (${totalWeight}kg)
+                </div>`;
+            }
         }
 
-        if (isRaw) return header;
+        if (isRaw) return html;
 
-        const batches = Math.ceil(qty / (r.y || 1));
-        let html = header + `<div class="tree">`;
+        // Normal crafting tree
+        const batches = Math.ceil(qty / (r?.y || 1));
+        html += `<div class="tree">`;
         for (const [ing, q] of Object.entries(r.i || {})) {
             html += this.buildTree(ing, q * batches, depth + 1, path.concat(item));
         }
@@ -194,26 +263,85 @@ const Calculator = {
 
             expandToRaw(o.item, o.qty);
 
-            finalProductWeight += o.qty * this.weight(o.item);
+            let finalItemWeight = this.weight(o.item);
+            if (App.state.seeds) {
+                const seedData = Object.values(App.state.seeds).find(s => s.finalProduct === o.item);
+                if (seedData?.finalWeight) {
+                    finalItemWeight = seedData.finalWeight;
+                }
+            }
+            finalProductWeight += o.qty * finalItemWeight;
 
             const sellPrice = o.customPrice ?? (App.state.customPrices[o.item]?.[o.tier] ||
                 this.cost(o.item) * (o.tier === "bulk" ? 1.10 : 1.25));
             grandSell += sellPrice * o.qty;
 
+            // === CORRECT WEIGHT & UNIT COST FOR INVOICE ===
+            let invoiceWeight = 0;
+            let unitCost = 0;
+
+            const isCropProduct = App.state.seeds && Object.values(App.state.seeds).some(s => s.finalProduct === o.item);
+
+            if (isCropProduct) {
+                const seedData = Object.values(App.state.seeds).find(s => s.finalProduct === o.item);
+                invoiceWeight = (o.qty * (seedData?.finalWeight || 0)).toFixed(3);
+
+                const cropKey = `crop→${o.item}`;
+                const isGrowing = Calculator.liveToggle[cropKey] === "grow";
+
+                unitCost = isGrowing
+                    ? Crops.calculateHarvestCostFromEstimate(o.item, 1)
+                    : Crops.getAverageCostPerUnit(o.item);
+            } else {
+                invoiceWeight = (o.qty * this.weight(o.item)).toFixed(3);
+                unitCost = this.cost(o.item);
+            }
+
             invoiceHTML += `<tr>
                 <td>${o.qty}</td>
                 <td><strong>${o.item}</strong></td>
                 <td>${o.tier === "bulk" ? "Bulk" : "Shop"}</td>
-                <td style="color:#0af;font-weight:bold;">${(o.qty * this.weight(o.item)).toFixed(2)}kg</td>
-                <td class="profit-only">$${this.cost(o.item).toFixed(2)}</td>
+                <td style="color:#0af;font-weight:bold;">${invoiceWeight}kg</td>
+                <td class="profit-only">$${unitCost.toFixed(4)}</td>
                 <td>$${sellPrice.toFixed(2)}</td>
                 <td>$${(sellPrice * o.qty).toFixed(2)}</td>
             </tr>`;
         });
 
-        // ──────── RAW MATERIALS TABLE (only if changed) ────────
-        for (const [item, qty] of Object.entries(totalRaw)) {
-            grandCost += this.cost(item) * qty;
+        // ──────── COMPUTE GRAND COST USING SAME LOGIC AS RAW TABLE ────────
+        grandCost = 0;
+        for (const [item, needed] of Object.entries(totalRaw)) {
+            const isCrop = App.state.seeds && Object.values(App.state.seeds).some(s => s.finalProduct === item);
+            const cropKey = `crop→${item}`;
+            const isGrowing = isCrop && Calculator.liveToggle[cropKey] === "grow";
+
+            let itemCost = 0;
+            if (isCrop) {
+                if (isGrowing) {
+                    const estimate = Crops.getHarvestEstimate(item, needed);
+
+                    // Seeds
+                    if (estimate.seedsNeeded) {
+                        for (const [seedName, seedQty] of Object.entries(estimate.seedsNeeded)) {
+                            totalRaw[seedName] = (totalRaw[seedName] || 0) + seedQty;
+                        }
+                    }
+
+                    // Ingredients
+                    if (estimate.ingredientsNeeded) {
+                        for (const [ingName, ingQty] of Object.entries(estimate.ingredientsNeeded)) {
+                            totalRaw[ingName] = (totalRaw[ingName] || 0) + ingQty;
+                        }
+                    }
+
+                    itemCost = Crops.calculateHarvestCostFromEstimate(item, needed);
+                } else {
+                    itemCost = Crops.getAverageCostPerUnit(item) * needed;
+                }
+            } else {
+                itemCost = this.cost(item) * needed;
+            }
+            grandCost += itemCost;
         }
 
         const rawTableHTML = this.generateRawTableHTML(totalRaw, finalProductWeight, grandSell);
@@ -309,10 +437,8 @@ const Calculator = {
     },
 
     generateRawTableHTML(totalRaw, finalWeight, grandSell) {
-        console.log("totalRaw:", JSON.stringify(totalRaw, null, 2));
-
         if (Object.keys(totalRaw).length === 0) {
-            return "<p style='text-align:center;color:#888;padding:40px'>No materials needed (all from warehouse)</p>";
+            return "<p style='text-align:center;color:#888;padding:40px'>No materials needed</p>";
         }
 
         let rows = `<table style="width:100%;border-collapse:collapse;margin-top:20px;font-size:14px;">
@@ -320,44 +446,81 @@ const Calculator = {
                         <th>Raw Material</th><th>Needed</th><th>In Stock</th><th>Weight</th><th>Status</th><th style="text-align:right">Cost</th>
                     </tr>`;
 
-        const sorted = Object.keys(totalRaw).sort((a, b) => a.localeCompare(b));
+        let materialsCost = 0;
         let totalWeightUsed = 0;
-        let materialsCost = 0;  // ← We calculate this ourselves!
+
+        const sorted = Object.keys(totalRaw).sort((a, b) => a.localeCompare(b));
 
         for (const item of sorted) {
             const needed = totalRaw[item];
             const stock = App.state.warehouseStock[item] || 0;
-            const cost = this.cost(item) * needed;
-            materialsCost += cost;  // ← Fixed: was broken before
 
-            const weight = needed * this.weight(item);
-            totalWeightUsed += weight;
+            let cost = 0;
+            let label = item;
 
-            const fromWH = Object.entries(Calculator.liveToggle).some(
-                ([k, v]) => v === "warehouse" && k.endsWith("→" + item)
+            const isCrop = App.state.seeds && Object.values(App.state.seeds).some(s => s.finalProduct === item);
+            const cropKey = `crop→${item}`;
+            const isGrowing = isCrop && Calculator.liveToggle[cropKey] === "grow";
+
+            // === DETERMINE COST ===
+            if (isCrop) {
+                if (isGrowing) {
+                    cost = Crops.calculateHarvestCostFromEstimate(item, needed);
+                    label = `${item} (harvest)`;
+                } else {
+                    cost = Crops.getAverageCostPerUnit(item) * needed;
+                    label = `${item} (avg harvest cost)`;
+                }
+            } else {
+                // Normal raw/crafted item
+                cost = Calculator.cost(item) * needed;
+            }
+
+            // === CORRECT WEIGHT LOGIC ===
+            let itemWeight = 0;
+
+            // 1. Final crop product? Use finalWeight from seed data
+            if (isCrop) {
+                const seedData = Object.values(App.state.seeds || {}).find(s => s.finalProduct === item);
+                if (seedData?.finalWeight) {
+                    itemWeight = seedData.finalWeight; // e.g. 1.0kg per Corn
+                }
+            }
+
+            // 2. Fallback: normal weight from recipe/raw
+            if (itemWeight === 0) {
+                itemWeight = Calculator.weight(item);
+            }
+
+            const lineWeight = needed * itemWeight;
+            totalWeightUsed += lineWeight;
+
+            materialsCost += cost;
+
+            const fromWH = !isGrowing && Object.entries(Calculator.liveToggle).some(
+                ([k, v]) => v === "warehouse" && k.includes(item)
             );
-            const label = fromWH ? `${item} (warehouse)` : item;
 
             rows += `<tr ${fromWH ? 'style="background:rgba(0,255,150,0.1)"' : ''}>
                         <td style="padding:8px"><strong>${label}</strong></td>
                         <td style="padding:8px">${needed}</td>
                         <td style="padding:8px">${stock}</td>
-                        <td style="padding:8px;color:#0af;font-weight:bold">${weight.toFixed(3)}kg</td>
+                        <td style="padding:8px;color:#0af;font-weight:bold">${lineWeight.toFixed(3)}kg</td>
                         <td style="padding:8px;color:${stock >= needed ? "#0f8" : "#f44"};font-weight:bold">
                             ${stock >= needed ? "OK" : "LOW"}
                         </td>
-                        <td style="padding:8px;text-align:right">$${cost.toFixed(2)}</td>
+                        <td style="padding:8px;text-align:right;font-weight:bold;">
+                            $${cost.toFixed(2)}
+                        </td>
                     </tr>`;
         }
 
-        // Now everything is calculated — no DOM scraping!
         const profit = grandSell - materialsCost;
-        const profitColor = profit >= 0 ? "#0f8" : "#f44";
 
         rows += `<tr style="background:#001122;color:#0ff;font-weight:bold;font-size:16px">
                     <td colspan="3" style="padding:14px">
                         Materials Cost: $${materialsCost.toFixed(2)}<br>
-                        Profit: <span style="color:${profitColor}">$${profit.toFixed(2)}</span>
+                        Profit: <span style="color:${profit >= 0 ? '#0f8' : '#f44'}">$${profit.toFixed(2)}</span>
                     </td>
                     <td style="padding:14px;color:#0af">${totalWeightUsed.toFixed(1)}kg<br><small>All Materials</small></td>
                     <td colspan="2" style="padding:14px;text-align:right">

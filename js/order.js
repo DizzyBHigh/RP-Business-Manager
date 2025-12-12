@@ -272,8 +272,21 @@ const Order = {
                 totalSale = parseFloat(document.getElementById("grandTotal")?.textContent.replace(/[$,]/g, "") || "0");
                 profit = parseFloat(document.getElementById("profitAmount")?.textContent.replace(/[$,]/g, "") || "0");
             }
-            App.state.order.forEach(o => totalWeight += o.qty * (Calculator.weight(o.item) || 0));
-            totalWeight = Number(totalWeight.toFixed(2));
+            // === CORRECT TOTAL WEIGHT USING FINAL PRODUCT WEIGHT FROM SEEDS ===
+            App.state.order.forEach(o => {
+                let itemWeight = Calculator.weight(o.item);
+
+                // If it's a crop final product (Corn, Wheat, etc.), use the finalWeight from seed data
+                if (App.state.seeds) {
+                    const seedData = Object.values(App.state.seeds).find(s => s.finalProduct === o.item);
+                    if (seedData?.finalWeight) {
+                        itemWeight = seedData.finalWeight;
+                    }
+                }
+
+                totalWeight += o.qty * itemWeight;
+            });
+            totalWeight = Number(totalWeight.toFixed(3)); // keep 3 decimals for accuracy
 
             // ──────── 4. GENERATE RECORD ────────
             const now = new Date();
@@ -312,38 +325,43 @@ const Order = {
 
             // INSIDE complete() — REPLACE YOUR consumeAndCraft WITH THIS
             const consumeAndCraft = (item, qty, path = []) => {
-                // FIX: Use the exact same arrow as Calculator.buildTree()
-                const key = path.concat(item).join("→");  // ← THIS IS THE CORRECT ARROW
-                const choice = Calculator.liveToggle[key] ?? "craft";
+                const key = path.concat(item).join("→");
+                const cropKey = `crop→${key}`;
+                const choice = Calculator.liveToggle[cropKey] ?? Calculator.liveToggle[key] ?? "craft";
                 const stock = App.state.warehouseStock[item] || 0;
                 const recipe = App.state.recipes[item];
 
-                console.log(`Processing ${qty}× ${item} | choice: ${choice} | stock: ${stock} | key: "${key}"`);
+                // === 1. CROP: "Grow" = Estimate only, NO CONSUMPTION ===
+                const isCrop = App.state.seeds && Object.values(App.state.seeds).some(s => s.finalProduct === item);
+                if (isCrop && choice === "grow") {
+                    // Do NOTHING — materials consumed manually in Harvest tab
+                    return;
+                }
 
-                // 1. Use warehouse stock if selected
-                if (choice === "warehouse" && stock >= qty) {
-                    console.log(`Using warehouse: deducting ${qty}× ${item}`);
+                // === 2. CROP: "Use Warehouse" ===
+                if (isCrop && choice === "warehouse" && stock >= qty) {
                     App.state.warehouseStock[item] = Math.max(0, stock - qty);
                     return;
                 }
 
-                // 2. No recipe → raw material → deduct
+                // === 3. NORMAL CRAFTING LOGIC (unchanged) ===
+                if (choice === "warehouse" && stock >= qty) {
+                    App.state.warehouseStock[item] = Math.max(0, stock - qty);
+                    return;
+                }
+
                 if (!recipe?.i || Object.keys(recipe.i).length === 0) {
-                    console.log(`Raw material: deducting ${qty}× ${item}`);
                     App.state.warehouseStock[item] = Math.max(0, (App.state.warehouseStock[item] || 0) - qty);
                     return;
                 }
 
-                // 3. Craft → consume ingredients
-                console.log(`Crafting ${qty}× ${item} → consuming ingredients`);
                 const batches = Math.ceil(qty / (recipe.y || 1));
                 for (const [ing, q] of Object.entries(recipe.i)) {
                     consumeAndCraft(ing, q * batches, path.concat(item));
                 }
 
-                // 4. ADD CRAFTED ITEM (only for restock modes)
+                // Add crafted item for restock orders
                 if (path.length === 0 && (isShopRestock || isWarehouseRestock)) {
-                    console.log(`Adding ${qty}× ${item} to ${isShopRestock ? "shop" : "warehouse"}`);
                     if (isShopRestock) {
                         App.state.shopStock[item] = (App.state.shopStock[item] || 0) + qty;
                     } else {

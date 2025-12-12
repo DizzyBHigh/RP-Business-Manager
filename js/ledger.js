@@ -240,6 +240,7 @@ const Ledger = {
         }
     },
 
+
     // ADD THIS METHOD TO Ledger OBJECT
     async deleteTransaction(id, index) {
         if (!await showConfirm("Permanently delete this transaction?\nThis cannot be undone.")) return;
@@ -259,8 +260,10 @@ const Ledger = {
 
 // Ledger onload functions
 document.addEventListener("DOMContentLoaded", () => {
+
     Ledger.populateEmployeeFilter();
     Ledger.render();
+    LedgerManual.init(); // This hides forms and sets up buttons
 });
 
 // Refresh when clicking Ledger tab
@@ -279,7 +282,7 @@ const LedgerManual = {
         return `${prefix}-${now.toISOString().slice(0, 10).replace(/-/g, "")}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
     },
 
-    // Fill employee dropdowns once (call on init and when employees change)
+    // Fill employee dropdowns
     populateEmployeeSelects() {
         const employees = Object.keys(App.state.employees || {}).sort();
         const addSel = document.getElementById("addEmployee");
@@ -290,7 +293,8 @@ const LedgerManual = {
             sel.innerHTML = '<option value="">Select Employee (optional)</option>';
             employees.forEach(name => {
                 const opt = document.createElement("option");
-                opt.value = name; opt.textContent = name;
+                opt.value = name;
+                opt.textContent = name;
                 sel.appendChild(opt);
             });
             if (employees.includes(current)) sel.value = current;
@@ -319,7 +323,7 @@ const LedgerManual = {
         App.save("ledger");
         Ledger.render();
         showToast("success", `$${amount.toFixed(2)} added to ledger`);
-        this.clearForms("add");
+        this.hideForms();
     },
 
     // REMOVE MONEY
@@ -344,17 +348,47 @@ const LedgerManual = {
         App.save("ledger");
         Ledger.render();
         showToast("success", `$${amount.toFixed(2)} removed from ledger`);
-        this.clearForms("remove");
+        this.hideForms();
     },
 
-    clearForms(which = "both") {
-        if (which === "add" || which === "both") {
-            document.getElementById("addAmount").value = "";
-            document.getElementById("addDesc").value = "";
-        }
-        if (which === "remove" || which === "both") {
-            document.getElementById("removeAmount").value = "";
-            document.getElementById("removeDesc").value = "";
-        }
+    // CLEAR FORM INPUTS
+    clearForms() {
+        document.getElementById("addAmount").value = "";
+        document.getElementById("addDesc").value = "";
+        document.getElementById("removeAmount").value = "";
+        document.getElementById("removeDesc").value = "";
+    },
+
+    // SHOW/HIDE FORMS
+    showAddForm() {
+        document.getElementById("addMoneyForm").style.display = "block";
+        document.getElementById("removeMoneyForm").style.display = "none";
+        document.getElementById("showAddMoneyBtn").style.display = "none";
+        document.getElementById("showRemoveMoneyBtn").style.display = "none";
+        document.getElementById("addAmount").focus();
+    },
+
+    showRemoveForm() {
+        document.getElementById("removeMoneyForm").style.display = "block";
+        document.getElementById("addMoneyForm").style.display = "none";
+        document.getElementById("showAddMoneyBtn").style.display = "none";
+        document.getElementById("showRemoveMoneyBtn").style.display = "none";
+        document.getElementById("removeAmount").focus();
+    },
+
+    hideForms() {
+        document.getElementById("addMoneyForm").style.display = "none";
+        document.getElementById("removeMoneyForm").style.display = "none";
+        document.getElementById("showAddMoneyBtn").style.display = "inline-block";
+        document.getElementById("showRemoveMoneyBtn").style.display = "inline-block";
+        LedgerManual.clearForms();
+    },
+    init() {// INITIALIZE ON PAGE LOAD
+        this.hideForms();
+        this.populateEmployeeSelects();
+
+        document.getElementById("showAddMoneyBtn").onclick = () => this.showAddForm();
+        document.getElementById("showRemoveMoneyBtn").onclick = () => this.showRemoveForm();
     }
+
 };
