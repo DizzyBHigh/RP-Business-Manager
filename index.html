@@ -794,6 +794,174 @@
         </div>
     </div>
 
+    <!-- Seeds Tab -->
+    <div id="seeds" class="tab-content" style="display:none;">
+        <div style="background:var(--card); padding:20px; border-radius:12px; margin:20px 0;">
+            <h3 style="color:var(--accent); margin:0 0 20px; text-align:center;">Add / Update Seed</h3>
+
+            <div
+                style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; max-width:1200px; margin:0 auto;">
+                <div style="flex:1 1 200px; min-width:180px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Seed Name</label>
+                    <input id="seedName" type="text" placeholder="e.g. Corn Seed"
+                        style="padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+
+                <div style="flex:1 1 200px; min-width:180px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Seed Weight (kg)</label>
+                    <input id="seedWeight" type="number" step="0.01" placeholder="0.10"
+                        style="padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+
+                <div style="flex:1 1 200px; min-width:180px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Seed Price ($)</label>
+                    <input id="seedPrice" type="number" step="0.01" placeholder="0.50"
+                        style="padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+
+                <div style="flex:1 1 200px; min-width:180px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Produce Name</label>
+                    <input id="finalProduct" type="text" placeholder="e.g. Corn"
+                        style="padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+
+                <div style="flex:1 1 200px; min-width:180px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Produce Weight (kg)</label>
+                    <input id="finalWeight" type="number" step="0.01" placeholder="1.00"
+                        style="padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+
+
+            </div>
+
+            <div style="text-align:center; margin-top:24px;">
+                <button type="button" class="primary large" onclick="Crops.addSeed()"
+                    style="padding:14px 40px; font-size:18px;">
+                    Add / Update Seed
+                </button>
+            </div>
+        </div>
+
+        <!-- Seeds Table -->
+        <div style="background:var(--card); padding:20px; border-radius:12px; margin:20px 0;">
+            <h3 style="color:var(--accent); margin:0 0 16px;">Current Seeds</h3>
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#222;">
+                            <th>Seed</th>
+                            <th>Weight</th>
+                            <th>Seed Stock</th>
+                            <th>Price</th>
+                            <th>→ Product</th>
+                            <th>Prod. Weight</th>
+                            <th>Product Stock</th>
+                            <th style="width:140px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="seedsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Harvests Tab -->
+    <div id="harvests" class="tab-content" style="display:none;">
+        <div style="background:var(--card); padding:20px; border-radius:12px; margin:20px 0;">
+            <h3 style="color:var(--accent); margin:0 0 20px; text-align:center;">Create Harvest</h3>
+
+            <div
+                style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; max-width:1200px; margin:0 auto;">
+                <div style="flex:1 1 320px; min-width:280px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Select Seed</label>
+                    <select id="harvestSeed"
+                        style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                        <option value="">Select Seed</option>
+                    </select>
+                </div>
+
+                <div style="flex:1 1 200px; min-width:180px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Seeds to Plant</label>
+                    <input id="seedsToPlant" type="number" placeholder="e.g. 10"
+                        style=" padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+
+                <!-- SEARCHABLE INGREDIENT DROPDOWN -->
+                <div style="flex:1 1 200px; min-width:300px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Add Ingredient (Fertilizer, Water,
+                        etc.)</label>
+                    <div style="position:relative;">
+                        <input type="text" id="ingredientSearch" placeholder="Search ingredients..." autocomplete="off"
+                            style="width:80%; padding:12px 40px 12px 12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                        <div id="ingredientDropdown"
+                            style="display:none; position:absolute; top:100%; left:0; right:0; max-height:300px; overflow-y:auto; background:#111; border:2px solid var(--accent); border-top:none; border-radius:0 0 8px 8px; z-index:100;">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div style="flex:1 1 200px; min-width:150px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Quantity</label>
+                    <input id="ingredientQty" type="number" placeholder="e.g. 5"
+                        style="width:100%; padding:12px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+                </div>
+
+                <div style="flex:1 1 200px; min-width:150px; display:flex; align-items:end;">
+                    <button type="button" class="primary" onclick="Crops.addIngredient()"
+                        style="padding:12px 20px; width:100%; height:48px;">
+                        Add Ingredient
+                    </button>
+                </div>
+            </div>
+
+            <!-- Current Ingredients List -->
+            <div id="ingredientsList"
+                style="margin:20px 0; min-height:60px; padding:12px; background:#111; border-radius:8px; border:1px dashed #444;">
+                <em style="color:#666;">No ingredients added yet</em>
+            </div>
+
+            <div style="display:flex; flex-wrap:wrap; gap:18px; justify-content:center; margin-top:10px;">
+                <div style="flex:1 1 400px; min-width:280px;"></div>
+                <div style="flex:1 1 100px;">
+                    <label style="display:block; margin-bottom:6px; color:#0af;">Final Yield (e.g. 96)</label>
+                    <input id="harvestYield" type="number" placeholder="Total items harvested"
+                        style="padding:10px; border-radius:8px; border:2px solid #333; background:#222; color:white;">
+
+                </div>
+
+                <div style="flex:1 1 150px;  display:flex; align-items:end;">
+                    <button type="button" class="success large" onclick="Crops.completeHarvest()"
+                        style="font-size:18px; width:100%;">
+                        Complete Harvest
+                    </button>
+                </div>
+                <div style="flex:1 1 400px; min-width:280px;"></div>
+            </div>
+        </div>
+
+        <!-- Harvest History -->
+        <div style="background:var(--card); padding:20px; border-radius:12px; margin:20px 0;">
+            <h3 style="color:var(--accent); margin:0 0 16px;">Harvest History</h3>
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#222;">
+                            <th>Date</th>
+                            <th>Seed</th>
+                            <th>Seeds Used</th>
+                            <th>Ingredients</th>
+                            <th>Yield</th>
+                            <th>Total Cost</th>
+                            <th>Cost/Unit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="harvestsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
     <!-- LEDGER TAB — NOW WITH MANUAL ADD/REMOVE MONEY -->
     <div id="ledger" class="tab-content">
         <h2>Business Ledger</h2>
@@ -1339,8 +1507,9 @@
     </script>
     <script src="js/firebaseconfig.js"></script>
     <script src="js/firebase.js"></script>
-    <script src="js/businessSetup.js"></script>
     <script src="js/storage.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/businessSetup.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/calculator.js"></script>
     <script src="js/order.js"></script>
@@ -1352,8 +1521,10 @@
     <script src="js/recipes.js"></script>
     <script src="js/categories.js"></script>
     <script src="js/shopsales.js"></script>
+    <script src="js/crops.js"></script>
     <script src="js/sync.js"></script>
-    <script src="js/app.js"></script> <!-- init and startup -->
+
+
 
 </body>
 

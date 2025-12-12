@@ -142,7 +142,7 @@ const Inventory = {
 
         // === 2. RAW MATERIALS ON DISPLAY ===
         Object.keys(minStock)
-            .filter(k => (minStock[k] >= 0) && rawPrice[k] && !recipes[k])
+            .filter(k => minStock[k] >= 0 && !recipes[k] && App.state.rawPrice?.[k] !== undefined)
             .sort()
             .forEach(raw => {
                 if (search && !raw.toLowerCase().includes(search)) return;
@@ -163,8 +163,24 @@ const Inventory = {
 
                 const needed = Math.max(0, min - shop);
 
-                const rawData = App.state.rawPrice[raw];
-                const costPrice = rawData ? Number(rawData.price || rawData) || 0 : 0;
+                // === SMART COST: Use average harvest cost for seed products ===
+                let costPrice = 0;
+                const rawItem = App.state.rawPrice?.[raw];
+
+                // 1. If it's a seed's final product (Corn, Wheat, etc.) → use average harvest cost
+                if (App.state.seeds) {
+                    const isFinalProduct = Object.values(App.state.seeds).some(s =>
+                        s.finalProduct === raw
+                    );
+                    if (isFinalProduct) {
+                        costPrice = Crops.getAverageCostPerUnit(raw);
+                    }
+                }
+
+                // 2. Fallback: use rawPrice (handles both number and {price})
+                if (costPrice === 0 && rawItem !== undefined) {
+                    costPrice = typeof rawItem === 'object' ? (rawItem.price || 0) : rawItem;
+                }
 
                 const shopPrice = Number(customPrices[raw]?.shop) || costPrice * 1.25;
                 const bulkPrice = Number(customPrices[raw]?.bulk) || 0;
@@ -276,8 +292,24 @@ const Inventory = {
                 const warehouseWeight = (warehouse * weightPerUnit).toFixed(2);
                 totalWeightWarehouse += warehouse * weightPerUnit;
 
-                const rawData = App.state.rawPrice[raw];
-                const costPrice = rawData ? Number(rawData.price || rawData) || 0 : 0;
+                // === SMART COST: Use average harvest cost for seed products ===
+                let costPrice = 0;
+                const rawItem = App.state.rawPrice?.[raw];
+
+                // 1. If it's a seed's final product (Corn, Wheat, etc.) → use average harvest cost
+                if (App.state.seeds) {
+                    const isFinalProduct = Object.values(App.state.seeds).some(s =>
+                        s.finalProduct === raw
+                    );
+                    if (isFinalProduct) {
+                        costPrice = Crops.getAverageCostPerUnit(raw);
+                    }
+                }
+
+                // 2. Fallback: use rawPrice (handles both number and {price})
+                if (costPrice === 0 && rawItem !== undefined) {
+                    costPrice = typeof rawItem === 'object' ? (rawItem.price || 0) : rawItem;
+                }
 
                 const row = document.createElement("tr");
                 row.style.background = "rgba(100,150,255,0.08)";
@@ -375,14 +407,28 @@ const Inventory = {
             return;
         }
 
+        // === THIS IS THE KEY FIX ===
+        // Auto-set a default shop price (e.g. 2× raw cost)
+        const rawCost = App.state.rawPrice?.[raw]?.price || App.state.rawPrice?.[raw] || 0;
+        const defaultShopPrice = (rawCost * 2).toFixed(2); // or 1.5, 3, whatever you want
+
+        if (!App.state.customPrices) App.state.customPrices = {};
+        if (!App.state.customPrices[raw]) App.state.customPrices[raw] = {};
+        App.state.customPrices[raw].shop = parseFloat(defaultShopPrice);
+
+        // === End of fix ===
+
         App.state.minStock[raw] = minNum;
         App.state.shopStock[raw] = 0;
 
-        App.save("minStock");
-        App.save("shopStock");
-
-        showToast("success", `${raw} added to shop display! Minimum stock: ${minNum}`);
-        this.render();
+        Promise.all([
+            App.save("minStock"),
+            App.save("shopStock"),
+            App.save("customPrices")
+        ]).then(() => {
+            showToast("success", `${raw} added to shop display! Price: $${defaultShopPrice}`);
+            this.render();
+        });
     },
 
     async removeFromShop(item) {

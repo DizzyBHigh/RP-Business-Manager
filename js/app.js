@@ -87,7 +87,8 @@ const AuthManager = {
 
         // NOW 100% safe to go online
         goOnline();   // ← ONLY runs after name + passphrase + role are confirmed
-
+        updateWelcomeScreen();
+        setInterval(updateWelcomeScreen, 3000);
         // Auto-redirect viewers to welcome tab
         if (window.myRole === "viewer") {
             console.log("Viewer detected → forcing Welcome tab");
@@ -678,6 +679,8 @@ const App = {
         recipes: { "Logs": { i: { "Wood": 2, "Labour": 1 }, y: 1 }, "Plank": { i: { "Logs": 1, "Labour": 1 }, y: 4 },/* ... all your recipes ... */ },
         order: [], currentEmployee: "", currentCustomer: "", craftingPreferences: {},
         orderDiscount: { amount: 0, reason: "" }, // ← NEW DISCOUNT FIELD
+        seeds: {},           // NEW: { "Corn Seed": { weight: 0.1, warehouseQty: 10, price: 0.5, finalProduct: "Corn", finalWeight: 1.0, finalWarehouseQty: 0, shopPrice: 2.5, bulkPrice: 1.8 } }
+        harvests: [],        // NEW: Array of harvest records { id, date, seed, seedsUsed, ingredients: [{name, qty}], yield, totalCost, costPerUnit }
     },
     cache: { cost: {} },
     lastSavedState: {},
@@ -848,6 +851,8 @@ const App = {
             RolesManager.render();
             renderPermissionsEditor();
             RecipeEditor.renderRecipeTable();
+            Crops.renderSeeds?.();
+            Crops.renderHarvests?.();
             // Trigger search inputs to refresh dropdowns
             ["itemSearch", "purchaseItemSearch"].forEach(id => {
                 const el = document.getElementById(id);
@@ -1647,6 +1652,24 @@ const DropdownMenu = {
                 }
             ]
         },
+        "Ranching": {  // Or create "Crops": { description: "Manage crops and harvests", tabs: [...] }
+            description: "manage your seeds crops and harvests",
+            tabs: [
+                // ... existing tabs ...
+                {
+                    id: "seeds", name: "Seeds", desc: "Manage crop seeds and prices", help: `
+                <p><strong>Crops Section - Seeds</strong></p>
+                <p>Add and configure seeds for planting, including final product prices and weights.</p>
+            `.trim()
+                },
+                {
+                    id: "harvests", name: "Harvests", desc: "Create harvests and track yields", help: `
+                <p><strong>Crops Section - Harvests</strong></p>
+                <p>Plant seeds, add ingredients, and record yields. Updates warehouse stock automatically.</p>
+            `.trim()
+                }
+            ]
+        },
         "Management": {
             description: "Employee management, permissions, financial ledger, and data sync",
             tabs: [{
@@ -1853,6 +1876,16 @@ async function activateTab(tabId) {
     if (tabId === "orders") {
         setTimeout(autoRestoreCheckedOutOrder, 100); // tiny delay ensures DOM is ready
     }
+
+    if (tabId === "seeds") {
+        Crops.renderSeeds();
+    }
+
+    if (tabId === "harvests") {
+        Crops.renderHarvests();
+        Crops.populateDropdowns();  // Populate selects
+        Crops.setupIngredientSearch();
+    }
     // Save last tab/section
     try {
         await ls.set("lastTab", tabId);
@@ -2024,10 +2057,6 @@ if (!window._tabOverrideInstalled) {
     }
     console.log('Tab override installed safely');
 }
-
-// Run immediately and every 3 seconds
-updateWelcomeScreen();
-
 
 // Start the app
 App.init();
