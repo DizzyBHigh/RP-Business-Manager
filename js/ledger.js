@@ -182,6 +182,9 @@ const Ledger = {
             } else if (e.type === "money_removed") {
                 amount = -(Math.abs(e.amount) || 0);
                 desc = e.description || "Cash Out";
+            } else if (e.type === "harvest_cost") {
+                typeHtml = `<span style="color:#ff6b35; font-weight:bold;">Harvest Cost</span>`;
+                /* row.style.background = "rgba(255, 107, 53, 0.08)"; */
             } else {
                 amount = Number(e.amount) || 0;
                 desc = e.description || e.type || "Transaction";

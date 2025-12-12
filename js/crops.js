@@ -71,63 +71,100 @@ const Crops = {
     },
 
     // Add/Update Seed
-    addSeed() {
-        const name = document.getElementById('seedName')?.value.trim();
-        if (!name) return showToast("fail", "Seed name required");
+    async addSeed() {
+        const rawSeedName = document.getElementById('seedName')?.value.trim();
+        const rawProductName = document.getElementById('finalProduct')?.value.trim();
 
-        const finalProduct = document.getElementById('finalProduct')?.value.trim();
-        if (!finalProduct) return showToast("fail", "Final product required");
+        if (!rawSeedName || !rawProductName) {
+            return showToast("fail", "Both Seed Name and Final Product are required");
+        }
+
+        // Normalize to Title Case
+        const formatName = (str) => str
+            .toLowerCase()
+            .split(/[\s_-]+/)
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
+        const seedName = formatName(rawSeedName);
+        const productName = formatName(rawProductName);
 
         const price = parseFloat(document.getElementById('seedPrice').value) || 0;
         const weight = parseFloat(document.getElementById('seedWeight').value) || 0;
         const finalWeight = parseFloat(document.getElementById('finalWeight').value) || 0;
 
-        App.state.seeds[name] = { price, weight, finalProduct, finalWeight };
+        // === CHECK IF WE'RE EDITING (seedName already exists) ===
+        const isEditing = App.state.seeds?.[seedName] !== undefined;
+        const oldData = isEditing ? App.state.seeds[seedName] : null;
+
+        // === DUPLICATE CHECKS (skip current seed when editing) ===
+        if (!isEditing && App.state.seeds?.[seedName]) {
+            return showToast("fail", `Seed "${seedName}" already exists!`);
+        }
+
+        // Check if product name is used by another seed
+        const productConflict = Object.entries(App.state.seeds || {}).some(([name, data]) => {
+            return name !== seedName && data.finalProduct === productName;
+        });
+        if (productConflict) {
+            return showToast("fail", `Product "${productName}" is already produced by another seed!`);
+        }
+
+        // === SAVE SEED ===
+        App.state.seeds[seedName] = {
+            price,
+            weight,
+            finalProduct: productName,
+            finalWeight
+        };
+
+        // === UPDATE rawPrice SAFELY ===
+        if (!App.state.rawPrice) App.state.rawPrice = {};
+        App.state.rawPrice[seedName] = price;
+        App.state.rawPrice[productName] = 0;
 
         // Initialize stock
-        App.state.warehouseStock[name] = App.state.warehouseStock[name] || 0;
-        App.state.warehouseStock[finalProduct] = App.state.warehouseStock[finalProduct] || 0;
+        if (!App.state.warehouseStock) App.state.warehouseStock = {};
+        App.state.warehouseStock[seedName] = App.state.warehouseStock[seedName] || 0;
+        App.state.warehouseStock[productName] = App.state.warehouseStock[productName] || 0;
 
-        // === THIS IS THE MISSING PIECE ===
-        if (!App.state.rawPrice) App.state.rawPrice = {};
-        App.state.rawPrice[name] = price;
-        App.state.rawPrice[finalProduct] = 0;  // Harvested = free
+        // === SAVE TO FIREBASE ===
+        try {
+            await Promise.all([
+                App.save("seeds"),
+                App.save("rawPrice"),
+                App.save("warehouseStock")
+            ]);
 
-        if (!App.state.customPrices) App.state.customPrices = {};
-        if (!App.state.customPrices[finalProduct]) {
-            App.state.customPrices[finalProduct] = { shop: 2.00 };
-        }
-        // === END FIX ===
-
-        Promise.all([
-            App.save("seeds"),
-            App.save("rawPrice"),
-            App.save("customPrices"),
-            App.save("warehouseStock")
-        ]).then(() => {
             document.getElementById('seedForm')?.reset();
             Crops.renderSeeds();
-            Inventory.render();
-            showToast("success", `${name} → ${finalProduct} added and ready for sale!`);
-        });
+            Inventory.render?.();
+
+            const action = isEditing ? "updated" : "added";
+            showToast("success",
+                `Seed <strong>${seedName}</strong> ${action}!<br>
+             Produces: <strong>${productName}</strong>`
+            );
+        } catch (err) {
+            console.error("Save failed:", err);
+            showToast("fail", "Failed to save — check internet");
+        }
     },
 
     // Edit Seed (populate form)
     editSeed(name) {
+        Crops.showAddForm(name);
         const data = App.state.seeds[name];
         if (!data) return showToast("fail", "Seed not found");
 
+        // Set form values
         document.getElementById('seedName').value = name;
-        document.getElementById('seedWeight').value = data.weight;
-        document.getElementById('seedWarehouseQty').value = data.warehouseQty;
         document.getElementById('seedPrice').value = data.price;
+        document.getElementById('seedWeight').value = data.weight;
         document.getElementById('finalProduct').value = data.finalProduct;
         document.getElementById('finalWeight').value = data.finalWeight;
-        document.getElementById('finalWarehouseQty').value = data.finalWarehouseQty;
-        document.getElementById('shopPrice').value = data.shopPrice;
-        document.getElementById('bulkPrice').value = data.bulkPrice;
 
-        showToast("info", "Editing " + name + " — update and save!");
+        showToast("info", `Editing <strong>${name}</strong> — change values and click "Add / Update Seed"`);
     },
 
     // Delete Seed
@@ -137,6 +174,39 @@ const Crops = {
         App.save("seeds");
         this.renderSeeds();
         showToast("success", "Seed deleted");
+    },
+    showAddForm(seedName = null) {
+        const container = document.getElementById('seedFormContainer');
+        const title = document.getElementById('seedFormTitle');
+
+        if (!container || !title) return;
+
+        if (seedName) {
+            const data = App.state.seeds[seedName];
+            if (!data) return showToast("fail", "Seed not found");
+
+            document.getElementById('seedName').value = seedName;
+            document.getElementById('seedPrice').value = data.price;
+            document.getElementById('seedWeight').value = data.weight;
+            document.getElementById('finalProduct').value = data.finalProduct;
+            document.getElementById('finalWeight').value = data.finalWeight;
+
+            title.textContent = `Edit Seed: ${seedName}`;
+        } else {
+            document.getElementById('seedForm')?.reset();
+            title.textContent = "Add New Seed";
+        }
+
+        container.style.display = "block";
+        container.scrollIntoView({ behavior: "smooth" });
+    },
+
+    hideAddForm() {
+        const container = document.getElementById('seedFormContainer');
+        if (container) {
+            container.style.display = "none";
+            document.getElementById('seedForm')?.reset();
+        }
     },
 
     setupIngredientSearch() {
@@ -414,3 +484,4 @@ const Crops = {
 
 // Expose globally (matching your pattern)
 window.Crops = Crops;
+Crops.renderSeeds

@@ -141,6 +141,15 @@ const Inventory = {
         });
 
         // === 2. RAW MATERIALS ON DISPLAY ===
+        if (Object.keys(minStock).some(k => minStock[k] >= 0 && !recipes[k] && App.state.rawPrice?.[k] !== undefined)) {
+            const rawHeader = document.createElement("tr");
+            rawHeader.innerHTML = `
+                <td colspan="10" style="background:#222; color:#d4850e; padding:14px; text-align:center; font-weight:bold; font-size:16px;">
+                    RAW MATERIALS ON DISPLAY
+                </td>
+            `;
+            fragment.appendChild(rawHeader);
+        }
         Object.keys(minStock)
             .filter(k => minStock[k] >= 0 && !recipes[k] && App.state.rawPrice?.[k] !== undefined)
             .sort()
@@ -238,11 +247,11 @@ const Inventory = {
                             class=" warehouse-stock-input"
                             data-item="${raw}"
                             value="${warehouse}">
-                        <br><span style="color:#888;">warehouse</span>
+                        
                         <br><span style="color:#0af;">${warehouseWeight}kg</span>
                     </td>
                     <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
-                    <span style="color:#888;">For Sale In Shop</span><br>
+                        <span style="color:#888;">For Sale In Shop</span><br>
                         <input type="number" min="0"
                             class=" shop-stock-input"
                             data-item="${raw}"
@@ -250,14 +259,13 @@ const Inventory = {
                         
                         <br><span style="color:#0af;">${shopWeight}kg</span>
                     </td>
-                    <td>
+                    <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
                         <span style="color:#888;">Min Shop Stock</span><br>
                         <input type="number" min="0"
                             class="min-stock-input"
                             data-item="${raw}"
                             value="${min}"
-                            title="0 = Not on display">
-                        
+                            title="0 = Not on display"><br>&nbsp;
                     </td>
                     <td style="color:${low ? 'var(--red)' : 'var(--green)'};font-weight:bold;">
                         ${low ? 'LOW (-' + needed + ')' : 'OK'}
@@ -280,9 +288,9 @@ const Inventory = {
 
         if (rawNotOnDisplay.length > 0 && (!search || rawNotOnDisplay.some(r => r.toLowerCase().includes(search)))) {
             const header = document.createElement("tr");
-            header.innerHTML = `<td colspan="10" style="background:#222;color:#aaa;padding:12px;text-align:center;font-weight:bold;">
-                RAW MATERIALS NOT ON DISPLAY
-            </td>`;
+            header.innerHTML = `<td colspan="10" style="background:#222; color:#d4850e; padding:14px; text-align:center; font-weight:bold; font-size:16px;">
+            RAW MATERIALS NOT ON DISPLAY
+        </td>`;
             fragment.appendChild(header);
 
             rawNotOnDisplay.forEach(raw => {

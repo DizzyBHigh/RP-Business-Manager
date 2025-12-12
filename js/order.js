@@ -471,8 +471,8 @@ const Order = {
                         <td>${o.customer || "—"}</td>
                         <td>${o.itemSummary}</td>
                         <td style="color:#0af;font-weight:bold;">${weightText}</td>
-                        <td>$${o.totalSale?.toFixed(2) || "0.00"}</td>
-                        <td style="color:#0f8;"><strong>$${gross.toFixed(2)}</strong></td>
+                        <td style="font-weight:bold;">$${o.totalSale?.toFixed(2) || "0.00"}</td>
+                        <td style="color:#0f8; font-weight:bold;">$${gross.toFixed(2)}</td>
                         <td style="color:#0cf;">${rate}% → $${comm.toFixed(2)}</td>
                         <td style="color:#0f8;font-weight:bold;">$${net.toFixed(2)}</td>
                         <td style="text-align:center;font-size:1.2em;">${paidStatus}</td>
