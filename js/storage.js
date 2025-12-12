@@ -1,3 +1,41 @@
+// =============================================
+// FINAL — 100% NAMESPACED — NO RAW localStorage EVER AGAIN
+// =============================================
+
+let CACHED_COMPANY_ID = null;
+
+async function getCurrentCompanyId() {
+    if (CACHED_COMPANY_ID) return CACHED_COMPANY_ID;
+
+    try {
+        const snap = await db.collection("business").doc("config").get();
+        if (!snap.exists) {
+            CACHED_COMPANY_ID = "default-business";
+            return CACHED_COMPANY_ID;
+        }
+
+        const data = snap.data();
+        if (data.companyId && data.companyId.trim()) {
+            CACHED_COMPANY_ID = data.companyId.trim();
+            return CACHED_COMPANY_ID;
+        }
+
+        const generated = (data.name || "Business")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "")
+            .substring(0, 40) || "business";
+
+        await db.collection("business").doc("config").update({ companyId: generated });
+        CACHED_COMPANY_ID = generated;
+        return generated;
+    } catch (e) {
+        CACHED_COMPANY_ID = "fallback-business";
+        return CACHED_COMPANY_ID;
+    }
+}
+
+
 // THE ONE AND ONLY local Storage functiom — USED BY EVERYTHING
 window.ls = {
     async get(key, fallback = null) {
