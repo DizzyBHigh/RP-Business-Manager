@@ -20,7 +20,7 @@ const RawMaterials = {
                 </div>
                 <input type="number" class="qty-input" placeholder="Qty" min="1" value="1"
                     style="width:70%; padding:14px; font-size:16px; background:#001122; border:1px solid #0af; border-radius:8px; text-align:center;">
-                <input type="number" step="0.01" class="price-input active-input" placeholder="Price/unit"
+                <input type="number" step="0.01" class="price-input active-input" placeholder="Price/unit (0.00 = free)"
                     style="width:70%; padding:14px; font-size:16px; background:#002200; border:1px solid #0f8; border-radius:8px; color:#0f8; font-weight:bold;">
                 <input type="number" step="0.01" class="total-input" placeholder="Total" readonly
                     style="width:60%; padding:14px; font-size:16px; background:#001122; border:1px solid #444; border-radius:8px; color:#0af; font-weight:bold;">
@@ -133,8 +133,15 @@ const RawMaterials = {
             const qty = parseInt(line.querySelector(".qty-input").value) || 0;
             const pricePer = parseFloat(line.querySelector(".price-input").value) || 0;
 
-            if (!name || qty <= 0 || pricePer <= 0) {
-                return showToast("fail", "All lines must have item, qty > 0 and price > 0");
+            if (!name) {
+                return showToast("fail", "All lines must have a valid item selected");
+            }
+            if (qty <= 0) {
+                return showToast("fail", "Quantity must be greater than 0");
+            }
+            // Allow pricePer = 0 (free), but optionally warn if >0 lines exist with 0 price
+            if (pricePer < 0) {
+                return showToast("fail", "Price per unit cannot be negative");
             }
 
             if (!App.state.rawPrice[name] && !App.state.recipes[name]) {
@@ -148,15 +155,21 @@ const RawMaterials = {
 
             // Add to warehouse
             App.state.warehouseStock[name] = (App.state.warehouseStock[name] || 0) + qty;
+
         }
 
         const ok = await showConfirm(`
             CONFIRM MULTI-PURCHASE
             
-            ${purchases.map(p => `• ${p.qty}× ${p.name} @ $${p.pricePer.toFixed(2)} = $${p.cost.toFixed(2)}`).join('\n')}
+            ${purchases.map(p => {
+            const freeTag = p.pricePer === 0 ? " (FREE)" : "";
+            return `• ${p.qty}× ${p.name} @ $${p.pricePer.toFixed(2)}${freeTag} = $${p.cost.toFixed(2)}`;
+        }).join('\n')}
             
             TOTAL: $${totalCost.toFixed(2)}
             Supplier: ${supplier}
+            
+            ${totalCost === 0 ? "⚠️ This is a completely free purchase." : ""}
         `);
 
         if (!ok) return;
@@ -184,7 +197,7 @@ const RawMaterials = {
         showToast("success", `Purchased ${purchases.length} items for $${totalCost.toFixed(2)}`);
 
         // Reset form
-        document.getElementById("multiPurchaseForm").style.display = "none";
+        document.getElementById("sharedMultiPurchaseForm").style.display = "none";
         document.getElementById("showMultiPurchaseBtn").style.display = "block";
         document.getElementById("multiSupplier").value = "";
 

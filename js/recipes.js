@@ -214,6 +214,19 @@ const RecipeEditor = {
             `;
             ingredientsBox.after(buttonRow);
         }
+        // Store original name in a hidden input or data attribute ===
+        const editForm = document.getElementById("editArea");
+        if (editForm) {
+            // Create or update a hidden input to track original name
+            let originalNameInput = editForm.querySelector('#originalRecipeName');
+            if (!originalNameInput) {
+                originalNameInput = document.createElement('input');
+                originalNameInput.type = 'hidden';
+                originalNameInput.id = 'originalRecipeName';
+                editForm.appendChild(originalNameInput);
+            }
+            originalNameInput.value = name;  // This is the true original name
+        }
 
         // POPULATE FIELDS
         const nameField = document.getElementById("editItemName");
@@ -291,18 +304,20 @@ const RecipeEditor = {
     },
 
     save() {
-        const originalName = document.getElementById("recipeSearch")?.value.trim() || "";
         const newNameRaw = document.getElementById("editItemName")?.value.trim();
         if (!newNameRaw) return showToast("fail", "Recipe name required!");
 
         const properNewName = toProperCase(sanitizeItemName(newNameRaw));
         if (!properNewName) return showToast("fail", "Invalid recipe name!");
 
-        // === CHECK FOR DUPLICATE NAME (but allow same name when editing) ===
+        // FIXED: Get original name from hidden field in edit form
+        const originalNameInput = document.querySelector("#editArea #originalRecipeName");
+        const originalName = originalNameInput?.value.trim() || "";
+
+        // Now this check works correctly
         const nameExists = App.state.recipes[properNewName] && properNewName !== originalName;
 
         if (nameExists) {
-            // Ask for confirmation before overwriting
             showConfirm(`A recipe named "${properNewName}" already exists.<br><br>Overwrite it?`,
                 () => this.performSave(properNewName, originalName),
                 () => showToast("info", "Save cancelled – no changes made")
@@ -310,7 +325,7 @@ const RecipeEditor = {
             return;
         }
 
-        // No conflict – save immediately
+        // No conflict — save immediately with toast
         this.performSave(properNewName, originalName);
     },
 
@@ -324,10 +339,14 @@ const RecipeEditor = {
             if (ing) ingredients[ing] = qty;
         });
 
+        const weightInput = document.getElementById("editWeight");
+        const weight = weightInput ? parseFloat(weightInput.value) : 0;
+        const safeWeight = isNaN(weight) ? 0 : weight;
+
         const recipe = {
             i: ingredients,
             y: parseInt(document.getElementById("editYield").value) || 1,
-            weight: parseFloat(document.getElementById("editWeight").value) || 0
+            weight: safeWeight
         };
 
         // Only delete old name if it's different and valid
@@ -345,7 +364,7 @@ const RecipeEditor = {
         document.getElementById("editArea").style.display = "none";
         document.getElementById("recipeSearch").value = properNewName;
 
-        showToast("success", `"${properNewName}" saved!`);
+        showToast("success", `"${properNewName}" saved with ${safeWeight.toFixed(2)} kg per item!`);
         RecipeEditor.renderRecipeTable();
     },
 

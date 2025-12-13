@@ -124,7 +124,7 @@ const Crops = {
         App.state.rawPrice[productName] = 0;
 
         // Initialize stock
-        if (!App.state.warehouseStock) App.state.warehouseStock = {};
+        //if (!App.state.warehouseStock) App.state.warehouseStock = {};
         App.state.warehouseStock[seedName] = App.state.warehouseStock[seedName] || 0;
         App.state.warehouseStock[productName] = App.state.warehouseStock[productName] || 0;
 
