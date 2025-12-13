@@ -534,73 +534,7 @@
         </table>
     </div>
 
-    <!-- INVENTORY TAB — NOW SHOWS WAREHOUSE FOR CRAFTED ITEMS + FREE STOCK SET -->
-    <div id="inventory" class="tab-content">
-        <h2>Inventory & Shop Stock Management</h2>
-        <p style="text-align:center; color:#888;margin-bottom:20px;">Manage shop display items • Add any raw material to
-            sell • Full warehouse
-            visibility</p>
 
-        <div class="controls" style="margin-bottom:20px;">
-            <input type="text" id="inventorySearch" placeholder="Search any item..."
-                style="width:380px;padding:10px;font-size:15px;">
-            <button class="primary" onclick="Inventory.render()">Refresh</button>
-            <button class="success" style="margin-left:10px;" onclick="Inventory.addAllLowStock()">Add All Low-Stock to
-                Restock Order</button>
-        </div>
-
-        <div style="background:var(--card);padding:16px;border-radius:8px;margin-bottom:20px;">
-            <strong id="inventorySummary" style="font-size:18px;"></strong>
-        </div>
-
-        <table>
-            <thead style="background:var(--accent);color:white;">
-                <tr>
-                    <th>Item</th>
-                    <th>Type</th>
-
-                    <th>Shop Price</th>
-                    <th>Bulk Price</th>
-                    <th>Warehouse Stock</th>
-                    <th>For Sale In Shop</th>
-                    <th>Min Stock</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="inventoryTable"></tbody>
-        </table>
-    </div>
-
-
-
-
-    <div id="pricelist" class="tab-content">
-        <div id="pricelistEditText"
-            style="text-align:center;margin-bottom:20px;padding:12px;background:#222;border-radius:8px;">
-
-        </div>
-        <div class="toolbar">
-            <input type="text" id="priceFilter" placeholder="Filter items..." style="width:300px;"
-                onkeyup="PriceList.render()">
-            <label><input type="checkbox" id="showHidden" onchange="PriceList.render()"> Show hidden</label>
-            <button class="danger small" onclick="PriceList.unhideAll()">UNHIDE ALL</button>
-        </div>
-        <button class="save-all" onclick="PriceList.saveAll()">SAVE ALL PRICES & HIDDEN</button>
-        <div id="priceListContainer"></div>
-    </div>
-
-    <div id="categories" class="tab-content">
-        <h2>Manage Categories</h2>
-        <!-- <div class="controls">
-            <input type="text" id="newCategoryName" placeholder="New category name">
-            <button class="success" onclick="Categories.add()">+ Add Category</button>
-        </div> -->
-        <div id="categoryList"></div>
-    </div>
-    <div id="<div id=" rawprices" class="tab-content">" class="tab-content">
-
-    </div>
     <div id="rawprices" class="tab-content">
         <div class="controls">
             <input type="text" id="newRawName" placeholder="Name (e.g. Oak Plank)" style="width:200px;">
@@ -608,7 +542,11 @@
             <input type="number" step="0.01" id="newRawPrice" value="1.00" style="width:100px;margin-left:10px;">
             <span style="margin:0 10px;color:#0af;">kg per unit</span>
             <input type="number" step="0.01" id="newRawWeight" value="0" style="width:80px;">
-            <button onclick="RawMaterials.add()" class="success">Add Material</button>
+            <button onclick="RawMaterials.add()" class="success">Add Raw Material</button>
+
+            <button class="primary" onclick="RawMaterials.showMultiForm()">
+                Purchase Raw Materials
+            </button>
         </div>
         <table id="rawTable" style="width:100%;margin-top:20px;">
             <thead>
@@ -622,7 +560,6 @@
             <tbody></tbody>
         </table>
     </div>
-
     <div id="rawpurchase" class="tab-content">
         <h2>Purchase Raw Materials</h2>
         <p style="text-align:center; color:#888; margin-bottom:40px;">
@@ -632,19 +569,19 @@
 
         <!-- PURCHASE BUTTON — ONLY HERE, NOWHERE ELSE -->
         <div style="text-align:center; margin:40px 0;">
-            <button id="showMultiPurchaseBtn" class="primary large"
-                style="padding:20px 60px; font-size:24px; font-weight:bold; border-radius:16px; box-shadow:0 8px 25px rgba(0,170,255,0.3);">
+            <button class="primary large" onclick="RawMaterials.showMultiForm()"
+                style="padding:20px 60px; font-size:24px;">
                 PURCHASE RAW MATERIALS
             </button>
         </div>
 
-        <!-- MULTI-PURCHASE FORM (hidden by default) -->
+        <!-- MULTI-PURCHASE FORM (hidden by default) 
         <div id="multiPurchaseForm"
             style="display:none; background:var(--card); padding:30px; border-radius:16px; border:3px solid #0af; margin:30px 0;">
             <h2 style="text-align:center; color:#0ff; margin-top:0;">Multi-Item Purchase</h2>
 
             <div id="purchaseLines">
-                <!-- First line -->
+               
                 <div class="purchase-line"
                     style="display:grid; grid-template-columns:3.5fr 1fr 1.5fr 1.5fr 1.2fr auto; gap:14px; align-items:center; margin-bottom:14px; padding:8px 0;">
                     <div style="position:relative;">
@@ -696,9 +633,50 @@
                     Cancel
                 </button>
             </div>
-        </div>
+        </div>-->
     </div>
+    <!-- INVENTORY TAB — NOW SHOWS WAREHOUSE FOR CRAFTED ITEMS + FREE STOCK SET -->
+    <div id="inventory" class="tab-content">
+        <h2>Inventory & Shop Stock Management</h2>
+        <p style="text-align:center; color:#888;margin-bottom:20px;">Manage shop display items • Add any raw
+            material to
+            sell • Full warehouse
+            visibility</p>
 
+        <div class="controls" style="margin-bottom:20px;">
+            <input type="text" id="inventorySearch" placeholder="Search any item..."
+                style="width:380px;padding:10px;font-size:15px;">
+            <button class="primary" onclick="Inventory.render()">Refresh</button>
+            <button class="success" style="margin-left:10px;" onclick="Inventory.addAllLowStock()">Add All Low-Stock
+                to
+                Restock Order</button>
+
+            <button class="primary" onclick="RawMaterials.showMultiForm()" style="margin-left:10px;">
+                Purchase Raw Materials
+            </button>
+        </div>
+
+        <div style="background:var(--card);padding:16px;border-radius:8px;margin-bottom:20px;">
+            <strong id="inventorySummary" style="font-size:18px;"></strong>
+        </div>
+
+        <table>
+            <thead style="background:var(--accent);color:white;">
+                <tr>
+                    <th>Item</th>
+                    <th>Type</th>
+                    <th>Shop Price</th>
+                    <th>Bulk Price</th>
+                    <th>Warehouse Stock</th>
+                    <th>For Sale In Shop</th>
+                    <th>Min Stock</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="inventoryTable"></tbody>
+        </table>
+    </div>
     <div id="recipes" class="tab-content">
         <!-- SEARCH BAR -->
 
@@ -1447,7 +1425,84 @@
         </div>
     </div>
 
+
+    <!--<div id="pricelist" class="tab-content">
+        <div id="pricelistEditText"
+            style="text-align:center;margin-bottom:20px;padding:12px;background:#222;border-radius:8px;">
+
+        </div>
+        <div class="toolbar">
+            <input type="text" id="priceFilter" placeholder="Filter items..." style="width:300px;"
+                onkeyup="PriceList.render()">
+            <label><input type="checkbox" id="showHidden" onchange="PriceList.render()"> Show hidden</label>
+            <button class="danger small" onclick="PriceList.unhideAll()">UNHIDE ALL</button>
+        </div>
+        <button class="save-all" onclick="PriceList.saveAll()">SAVE ALL PRICES & HIDDEN</button>
+        <div id="priceListContainer"></div>
     </div>
+
+    <div id="categories" class="tab-content">
+        <h2>Manage Categories</h2>
+         <div class="controls">
+                <input type="text" id="newCategoryName" placeholder="New category name">
+                <button class="success" onclick="Categories.add()">+ Add Category</button>
+            </div>
+        <div id="categoryList"></div>
+    </div> -->
+
+    </div>
+
+    <!-- SINGLE SHARED PURCHASE FORM — ONLY ONE IN THE ENTIRE APP -->
+    <div id="sharedMultiPurchaseForm"
+        style="display:none; background:var(--card); padding:30px; border-radius:16px; border:3px solid #0af; margin:40px 0; max-width:1000px; margin-left:auto; margin-right:auto;">
+        <h2 style="text-align:center; color:#0ff; margin-top:0;">Purchase Raw Materials</h2>
+
+        <div id="purchaseLines">
+            <!-- First line (same as before) -->
+            <div class="purchase-line"
+                style="display:grid; grid-template-columns:3.5fr 1fr 1.5fr 1.5fr 1.2fr 1fr; gap:14px; align-items:center; margin-bottom:14px; padding:8px 0;">
+                <div style="position:relative;">
+                    <input type="text" class="item-search" placeholder="Search item..."
+                        style="width:92%; padding:14px 16px; font-size:16px; background:#001122; border:1px solid #0af; border-radius:8px; color:white;">
+                    <div class="search-results"
+                        style="display:none; position:absolute; top:100%; left:0; right:0; background:#000; border:1px solid #0af; border-top:none; max-height:200px; overflow-y:auto; z-index:10; border-radius:0 0 8px 8px;">
+                    </div>
+                </div>
+                <input type="number" class="qty-input" placeholder="Qty" min="1" value="1"
+                    style="width:70%; padding:14px; font-size:16px; background:#001122; border:1px solid #0af; border-radius:8px; text-align:center;">
+                <input type="number" step="0.01" class="price-input active-input" placeholder="Price/unit"
+                    style="width:70%; padding:14px; font-size:16px; background:#002200; border:1px solid #0f8; border-radius:8px; color:#0f8; font-weight:bold;">
+                <input type="number" step="0.01" class="total-input" placeholder="Total" readonly
+                    style="width:60%; padding:14px; font-size:16px; background:#001122; border:1px solid #444; border-radius:8px; color:#0af; font-weight:bold;">
+                <div style="width:50%;text-align:right; font-weight:bold; color:#0f8; font-size:20px;"
+                    class="line-total">$0.00
+                </div>
+                <button type="button" class="danger small"
+                    onclick="this.closest('.purchase-line').remove(); RawMaterials.updateMultiTotal()"
+                    style="padding:14px 18px; font-size:20px; font-weight:bold; border-radius:8px;">Remove</button>
+            </div>
+        </div>
+
+        <div style="text-align:center; margin:20px 0;">
+            <button type="button" class="secondary add-line-btn" style="padding:12px 28px; font-size:16px;">
+                + Add Another Item </button>
+        </div>
+
+        <div style="background:#001122; padding:20px; border-radius:12px; margin:20px 0; text-align:center;">
+            <div style="font-size:18px; color:#0af;">TOTAL TO PAY</div>
+            <div id="multiTotalDisplay" style="font-size:42px; font-weight:bold; color:#0f8; margin:16px 0;">$0.00</div>
+            <input type="text" id="multiSupplier" placeholder="Supplier name (optional)"
+                style="padding:14px; width:340px; font-size:16px; margin:10px;">
+        </div>
+
+        <div style="text-align:center;">
+            <button class="success large" style="padding:18px 50px; font-size:22px;"
+                onclick="RawMaterials.multiPurchase()">CONFIRM PURCHASE</button>
+            <button class="secondary" style="padding:16px 32px; margin-left:20px;"
+                onclick="RawMaterials.hideMultiForm()">Cancel</button>
+        </div>
+    </div>
+
     <link rel="stylesheet" href="assets/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/dist/tesseract.min.js"></script>
     <!-- Firebase SDK v9 compat (works with your existing firebase.firestore() code) -->

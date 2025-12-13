@@ -15,12 +15,12 @@ const RecipeEditor = {
         const row = document.createElement("div");
         row.className = "ingredient-row";
         row.innerHTML = `
-      <div class="searchable-select">
-        <input type="text" placeholder="Ingredient" oninput="RecipeEditor.filterIng(this)">
-        <div class="options"></div>
-      </div>
-      <input type="number" value="1" min="1" style="width:80px;">
-      <button class="danger small" onclick="this.parentNode.remove()">Remove</button>`;
+            <div class="searchable-select">
+                <input type="text" placeholder="Ingredient" oninput="RecipeEditor.filterIng(this)">
+                <div class="options"></div>
+            </div>
+            <input type="number" value="1" min="1" style="width:80px;">
+            <button class="danger small" onclick="this.parentNode.remove()">Remove</button>`;
         cont.appendChild(row);
     },
 
@@ -75,7 +75,7 @@ const RecipeEditor = {
                                 style="padding:8px 16px; background:#0af; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
                             Edit
                         </button>
-                        <button onclick="RecipeEditor.duplicateFromList('${item}')" 
+                        <button onclick="RecipeEditor.load('${item}', true)" 
                                 style="padding:8px 16px; background:#fa5; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
                             Duplicate
                         </button>
@@ -95,31 +95,35 @@ const RecipeEditor = {
             noRecipes.textContent = val ? "No recipes match your search" : "No recipes yet";
         }
     },
+
     filterIng(input) {
         const val = String(input.value || "").toLowerCase().trim();
-        const opts = input.parentNode.querySelector(".options");
-        opts.innerHTML = "";
-        opts.style.display = val ? "block" : "none";
+        const results = input.parentNode.querySelector(".options");
+        if (!results) return; // safety
+
+        results.innerHTML = "";
+        results.style.display = val ? "block" : "none";
         if (!val) return;
 
         App.allItems()
             .filter(i => i.toLowerCase().includes(val))
             .slice(0, 15)
             .forEach(i => {
-                const d = document.createElement("div");
-                d.className = "category-item";
-                d.textContent = i;
-                d.onclick = () => {
+                const div = document.createElement("div");
+                div.className = "category-item";
+                div.textContent = i;
+                div.onclick = () => {
                     input.value = i;
-                    opts.style.display = "none";
+                    results.style.display = "none";
                     input.focus(); // nice touch
                 };
-                opts.appendChild(d);
+                results.appendChild(div);
             });
     },
+
     create() {
         const name = sanitizeItemName(document.getElementById("newItemName").value.trim());
-        if (!name || App.state.recipes[name]) return showToast("fail,", "Invalid or duplicate name!");
+        if (!name || App.state.recipes[name]) return showToast("fail", "Invalid or duplicate name!");
 
         // NEW: Force Proper Case for new recipe name
         const properName = toProperCase(name);
@@ -232,7 +236,7 @@ const RecipeEditor = {
             last.querySelector("input[type=text]").value = ing;
             last.querySelector("input[type=number]").value = qty;
         });
-
+        document.getElementById("editArea").scrollIntoView({ behavior: "instant", block: "start" });
         refreshAllStockLists();
     },
 
@@ -258,7 +262,7 @@ const RecipeEditor = {
         // Pre-fill name with "(Copy)" and select it
         nameField.value = currentName + " (Copy)";
         nameField.focus();
-        nameField.select();
+        nameField.select(); // highlights the text so user can type new name immediately
 
         // Hide Delete button (doesn't exist yet)
         const deleteBtn = document.querySelector('#editArea button[onclick*="RecipeEditor.del()"]');
@@ -267,7 +271,7 @@ const RecipeEditor = {
         // Change Save button text
         const saveBtn = document.querySelector('#editArea button[onclick="RecipeEditor.save()"]');
         if (saveBtn) saveBtn.textContent = "CREATE NEW RECIPE";
-
+        document.getElementById("editArea").scrollIntoView({ behavior: "instant", block: "start" });
         showToast("success", `"${currentName}" loaded for duplication — edit and click CREATE NEW RECIPE`);
     },
 
@@ -286,56 +290,32 @@ const RecipeEditor = {
         showToast("success", `"${itemName}" loaded for duplication — edit and save as new recipe`);
     },
 
-    async del() {
-        // Get name from edit form
-        const nameField = document.getElementById("editItemName");
-        if (!nameField || !nameField.value.trim()) {
-            return showToast("fail", "No recipe loaded to delete!");
+    save() {
+        const originalName = document.getElementById("recipeSearch")?.value.trim() || "";
+        const newNameRaw = document.getElementById("editItemName")?.value.trim();
+        if (!newNameRaw) return showToast("fail", "Recipe name required!");
+
+        const properNewName = toProperCase(sanitizeItemName(newNameRaw));
+        if (!properNewName) return showToast("fail", "Invalid recipe name!");
+
+        // === CHECK FOR DUPLICATE NAME (but allow same name when editing) ===
+        const nameExists = App.state.recipes[properNewName] && properNewName !== originalName;
+
+        if (nameExists) {
+            // Ask for confirmation before overwriting
+            showConfirm(`A recipe named "${properNewName}" already exists.<br><br>Overwrite it?`,
+                () => this.performSave(properNewName, originalName),
+                () => showToast("info", "Save cancelled – no changes made")
+            );
+            return;
         }
 
-        const name = nameField.value.trim();
-
-        const ok = await showConfirm(`Delete "${name}" forever? This cannot be undone.`);
-        if (!ok) return;
-
-        // Remove from local state
-        delete App.state.recipes[name];
-
-        // SAFE DELETE — only if name exists
-        if (name && name !== "") {
-            try {
-                await SHARED_DOC_REF.update({
-                    [`recipes.${name}`]: firebase.firestore.FieldValue.delete()
-                });
-                console.log("SUCCESS: Recipe deleted from Firestore:", name);
-            } catch (err) {
-                console.error("DELETE FAILED:", err);
-                showToast("fail", "Failed to delete from server — check console");
-                return;
-            }
-        }
-
-        // Force refresh
-        App.refresh();
-        debouncedCalcRun();
-        refreshAllStockLists();
-
-        // Close edit form
-        document.getElementById("editArea").style.display = "none";
-        document.getElementById("recipeSearch").value = "";
-
-        showToast("success", `"${name}" obliterated from existence.`);
-        RecipeEditor.renderRecipeTable();
+        // No conflict – save immediately
+        this.performSave(properNewName, originalName);
     },
 
-    save() {
-        const originalName = document.getElementById("recipeSearch").value.trim();
-        const newName = sanitizeItemName(document.getElementById("editItemName").value.trim());
-        if (!newName) return showToast("fail", "Name required!");
-
-        // NEW: Force Proper Case for new recipe name
-        const properNewName = toProperCase(newName);
-
+    // Helper method to do the actual save (keeps code clean and avoids duplication)
+    performSave(properNewName, originalName) {
         // Build recipe
         const ingredients = {};
         document.querySelectorAll("#editIngredients .ingredient-row").forEach(r => {
@@ -350,23 +330,55 @@ const RecipeEditor = {
             weight: parseFloat(document.getElementById("editWeight").value) || 0
         };
 
-        // If renamed → delete old key first
-        if (properNewName !== originalName) {
+        // Only delete old name if it's different and valid
+        if (originalName && originalName !== properNewName) {
             SHARED_DOC_REF.update({
                 [`recipes.${originalName}`]: firebase.firestore.FieldValue.delete()
-            }).catch(() => { });
+            }).catch(err => console.warn("Failed to delete old recipe name:", err));
         }
 
         // Save new/updated recipe
         App.state.recipes[properNewName] = recipe;
-
-        // Use App.save() for the actual save (it works for adding/updating)
         App.save("recipes");
 
-        // UI cleanup
+        // Clean up UI
         document.getElementById("editArea").style.display = "none";
         document.getElementById("recipeSearch").value = properNewName;
+
         showToast("success", `"${properNewName}" saved!`);
+        RecipeEditor.renderRecipeTable();
+    },
+
+    async del() {
+        const nameField = document.getElementById("editItemName");
+        if (!nameField) return showToast("fail", "No recipe loaded!");
+
+        const name = nameField.value.trim();
+        if (!name) return showToast("fail", "No recipe name to delete!");
+
+        const ok = await showConfirm(`Permanently delete "${name}"? This cannot be undone.`);
+        if (!ok) return;
+
+        // Remove from local state
+        delete App.state.recipes[name];
+
+        // Safe delete from Firestore (only if name exists)
+        try {
+            await SHARED_DOC_REF.update({
+                [`recipes.${name}`]: firebase.firestore.FieldValue.delete()
+            });
+            console.log("Recipe deleted:", name);
+        } catch (err) {
+            console.warn("Failed to delete from Firestore (may already be gone):", err);
+        }
+
+        App.refresh();
+        debouncedCalcRun();
+
+        document.getElementById("editArea").style.display = "none";
+        document.getElementById("recipeSearch").value = "";
+
+        showToast("success", `"${name}" deleted`);
         RecipeEditor.renderRecipeTable();
     },
 
@@ -455,29 +467,29 @@ const RecipeEditor = {
 
             const row = document.createElement("tr");
             row.innerHTML = `
-            <td style="padding:12px; text-align:left;">${item}</td>
-            <td style="padding:12px; text-align:center;">${yieldAmt}</td>
-            <td style="padding:12px; text-align:center;">${weight.toFixed(2)}</td>      
-            <td style="padding:12px; font-size:13px; line-height:1.6;">${ingredientsList}</td>
-            <td style="padding:12px; text-align:center;">$${costPrice.toFixed(2)}</td>
-            <td style="padding:12px; text-align:center;">
-                <div style="display:flex; gap:8px; align-items:center; justify-content:center;">
-                    <input type="number" min="1" value="1" style="width:60px; padding:6px;" id="qty_${item.replace(/ /g, '_')}">
-                    <button onclick="Inventory.addToOrder('${item}', document.getElementById('qty_${item.replace(/ /g, '_')}').value)" 
-                            style="padding:8px 16px; background:#0f8; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
-                        Add to Order
-                    </button>
-                    <button onclick="RecipeEditor.load('${item}')" 
-                            style="padding:8px 16px; background:#0af; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
-                        Edit
-                    </button>
-                    <button onclick="RecipeEditor.load('${item}', true)" 
-                            style="padding:8px 16px; background:#fa5; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
-                        Duplicate
-                    </button>
-                </div>
-            </td>
-        `;
+                <td style="padding:12px; text-align:left;">${item}</td>
+                <td style="padding:12px; text-align:center;">${yieldAmt}</td>
+                <td style="padding:12px; text-align:center;">${weight.toFixed(2)}</td>      
+                <td style="padding:12px; font-size:13px; line-height:1.6;">${ingredientsList}</td>
+                <td style="padding:12px; text-align:center; font-weight:bold;">$${costPrice.toFixed(2)}</td>
+                <td style="padding:12px; text-align:center;">
+                    <div style="display:flex; gap:8px; align-items:center; justify-content:center;">
+                        <input type="number" min="1" value="1" style="width:60px; padding:6px;" id="qty_${item.replace(/ /g, '_')}">
+                        <button onclick="Inventory.addToOrder('${item}', document.getElementById('qty_${item.replace(/ /g, '_')}').value)" 
+                                style="padding:8px 16px; background:#0f8; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+                            Add to Order
+                        </button>
+                        <button onclick="RecipeEditor.load('${item}')" 
+                                style="padding:8px 16px; background:#0af; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+                            Edit
+                        </button>
+                        <button onclick="RecipeEditor.load('${item}', true)" 
+                                style="padding:8px 16px; background:#fa5; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
+                            Duplicate
+                        </button>
+                    </div>
+                </td>
+            `;
             fragment.appendChild(row);
         });
 
@@ -514,8 +526,6 @@ const RecipeEditor = {
         }
     }
 };
-
-
 
 // AUTO-FIX: Proper Case for Recipe Names — SAFE & RELIABLE
 (function safeAutoFixRecipeNames() {

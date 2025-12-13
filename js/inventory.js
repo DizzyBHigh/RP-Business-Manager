@@ -55,6 +55,9 @@ const Inventory = {
             const bulkProfit = bulkPrice - costPrice;
             const sMargin = shop !== null && costPrice ? ((profit / costPrice) * 100) : 0;
             const bMargin = bulkProfit !== null && costPrice ? ((bulkProfit / costPrice) * 100) : 0;
+            const taxRate = App.state.shopTaxRate || 0.08; // default 8% if not set
+            const profitAfterTax = profit * (1 - taxRate);
+            const sMarginAfterTax = costPrice > 0 ? ((profitAfterTax / costPrice) * 100) : 0;
 
             const addBtn = needed > 0 ? `
                 <button class="success small" style="margin-bottom:4px;" onclick="Inventory.addToOrder('${item}', ${needed})">
@@ -84,9 +87,15 @@ const Inventory = {
                             <span style="font-weight: bold;color:#0e95d4;">Profit (shop):</span> 
                             <span style=" font-weight: bold; color:${profit >= 0 ? '#0f8' : '#f66'};">$${profit.toFixed(2)}</span>
                             <br>
+                            <span style="font-weight: bold;color:#0e95d4;">Profit After Tax:</span>
+                            <span style="font-weight: bold; color:${profitAfterTax >= 0 ? '#0ff' : '#f66'};">$${profitAfterTax.toFixed(2)}</span>
+                            <br>
                             <span style="font-weight: bold;color:#0e95d4;">margin:</span>
                             <span style="font-weight:bold;color:${sMargin >= 0 ? '#0f8' : '#f66'};">${sMargin.toFixed(2)}%</span>   
-                </td>
+                            <br>
+                            <span style="font-weight: bold;color:#0e95d4;">Margin after tax:</span>
+                            <span style="font-weight:bold;color:${sMarginAfterTax >= 0 ? '#0ff' : '#f66'};">${sMarginAfterTax.toFixed(1)}%</span>
+                        </td>
                 <td style="text-align:center; font-size:14px;">
                 <span style="font-weight:bold;color:#ee940e;">Raw Cost: </span>
                 <span style=" font-weight: bold; color:${costPrice >= 0 ? '#0f8' : '#f66'};">$${costPrice.toFixed(2)}</span><br>
@@ -198,6 +207,10 @@ const Inventory = {
 
                 const sMargin = shopPrice !== null && costPrice ? ((profit / costPrice) * 100) : 0;
                 const bMargin = bulkPrice !== null && costPrice ? ((bulkProfit / costPrice) * 100) : 0;
+                const taxRate = App.state.shopTaxRate || 0.08; // default 8% if not set
+                const profitAfterTax = profit * (1 - taxRate);
+                const sMarginAfterTax = costPrice > 0 ? ((profitAfterTax / costPrice) * 100) : 0;
+
                 const addBtn = needed > 0 ? `
                     <button class="success small" style="margin-bottom:4px;" onclick="Inventory.addToOrder('${raw}', ${needed})">
                         +${needed} to Order
@@ -221,13 +234,18 @@ const Inventory = {
                         <input type="number" class="shop-price-input" data-item="${raw}" data-tier="shop"
                             value="${shopPrice.toFixed(2)}" style="width:82px; text-align:center; font-weight:bold;"
                             placeholder="${(costPrice * 1.25).toFixed(2)}">
-                            
                             <br>
                             <span style="font-weight: bold;color:#0e95d4;">Profit (shop):</span>
-                            <span style="font-weight:bold;color:${profit >= 0 ? '#0f8' : '#f66'};">$${profit.toFixed(2)}</span><br>
+                            <span style="font-weight:bold;color:${profit >= 0 ? '#0f8' : '#f66'};">$${profit.toFixed(2)}</span>
+                            <br><span style="font-weight: bold;color:#0e95d4;">Profit After Tax:</span>
+                            <span style="font-weight: bold; color:${profitAfterTax >= 0 ? '#0ff' : '#f66'};">$${profitAfterTax.toFixed(2)}</span>
+                            <br>
                             <span style="font-weight: bold;color:#0e95d4;">margin:</span>
                             <span style="font-weight:bold;color:${sMargin >= 0 ? '#0f8' : '#f66'};">${sMargin.toFixed(2)}%</span>
-                    </td>
+                            <br>
+                            <span style="font-weight: bold;color:#0e95d4;">Margin after tax:</span>
+                            <span style="font-weight:bold;color:${sMarginAfterTax >= 0 ? '#0ff' : '#f66'};">${sMarginAfterTax.toFixed(1)}%</span>
+                            </td>
                     <td style="text-align:center; font-size:14px;">
                     <span style="font-weight:bold;color:#ee940e;">Raw Cost: </span>
                     <span style="color:${costPrice >= 0 ? '#0f8' : '#f66'};font-weight:bold;">$${costPrice.toFixed(2)}</span><br>

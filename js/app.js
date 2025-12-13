@@ -1478,64 +1478,76 @@ const DropdownMenu = {
             ]
         },
         "Raw Materials, Recipes and Stock Manager": {
-            description: "Track inventory, purchase raw materials, and manage warehouse stock levels",
+            description: "Manage Raw Materials, Recipes, Stock levels and prices, Purchase materials",
             tabs: [
                 {
-                    id: "rawprices", name: "Raw Materials", desc: "Set buy prices and weights for all raw materials", help: `
-              <p><strong>Stock and Raw Materials Section - Raw Materials</strong></p>
-              <p>This is where you can configure add and delete raw materials your business consumes.</p>
-              <p>Raw materials can be added via the form at the top</p>
-              <ul>
-              <li>Enter the name of the raw material</li>
-              <li>The price of the raw material</li>
-              <li>The weight of the rap material</li>
-              </ul>
-              <p>Once a raw material has been added it will appear in the list<br /><br /> The price and weight of a raw material can be changed at any time, just enter the new weight or price and click the save button.</p>
-              <p>&nbsp;</p>
-            `.trim()
-                },
-                {
-                    id: "rawpurchase", name: "Purchase Stock", desc: "Record new raw material deliveries to warehouse", help: `
-              <p><strong>Stock and Raw Materials Section - Purchase Raw Materials</strong></p>
-              <p>When you add raw materials to your business warehouse</p>
-              <p>fill out this form to maintain correct stock levels and ledger.</p>
-              <ul>
-              <li>start typing the name of the raw material and select it from the list.<br />The filter will show the item and its currenty set price in raw Materials<br /><em><strong>(If the name does not appear make sure it has been added to the Raw Materials list on the Raw Materials Section)</strong><br /></em></li>
-              <li>Enter the Quantity of the raw material you are adding.</li>
-              <li>Enter the total price of the raw materials you are adding</li>
-              <li>Enter the suppliers name</li>
-              <li>select your name from the employee list</li>
-              </ul>
-              <p><em>If you are adding materials you have collected yourself, it is still best to use this form and put in 0 as the buy cost.</em><br /><br />Click R<strong>ecord purchase &amp; Add to Warehouse</strong>.<br /><br />A confirmation will appear with the purchase detials<br />click <strong>OK<br /></strong><br />A record of the purchase will be added to the Ledger and the warehouse stock will be updated.</p>
-              <p>&nbsp;</p>
+                    id: "rawprices", name: "Raw Materials", desc: "Set cost price and weights for all raw materials", help: `
+                    <p><strong>Raw Materials</strong></p>
+
+                    <p>This section allows you to manage raw materials your business uses. Raw materials are things like Iron Ore, Fiber Rocks, Wood etc
+                    Generally anything that you can harvest yourself from the world that do not need a recipe to create.
+
+                    You should add anything that your business consumes that yopu do not make yourself
+
+                    For example if you use Iron but do not smelt it yourself then add Iron as a raw material and set the normal price that you would pay for the resource.</p>
+
+                    <p>Raw materials can be added via the form at the top</p>
+
+                    <ul>
+
+                    <li>Enter the name of the raw material</li>
+
+                    <li>The price of the raw material</li>
+
+                    <li>The weight of the raw material</li>
+
+                    </ul>
+
+                    <p>Once a raw material has been added it will appear in the list<br /><br /> The price and weight of a raw material can be changed at any time, just enter the new weight or price and click the save button.</p>
+                    <p> Rows that are darkened are materials that currently have no weight set</p>
+
+
+                    <p>&nbsp;</p>
             `.trim()
                 },
                 {
                     id: "recipes", name: "Recipe Manager", desc: "Create, edit and delete crafting recipes", help: `
-              <p><strong>Craftable Products Section - Recipe Manager</strong></p>
-              <p>The recipe Manager is where you add all your craftable products.<br /><br />Recipes can be created from Raw Materilas, Other Recipies or Both.<br /><br />Creating a recipe is simple:</p>
+              <
+              p><strong>Recipe Manager</strong></p>
+
+              <p>The recipe Manager is where you add all your craftable products.<br /><br />Recipes can be created from Raw Materials, Other Recipes or Both.<br /><br />Creating a recipe is simple:</p>
+              Click the yellow -  + Create New Recipe Button<br>
+              You will be presented with a form
               <ul>
-              <li><strong>Name</strong> - The name of the item</li>
-              <li><strong>Yield per Craft</strong> - how many items this recipe creates</li>
+
+              <li><strong>Recipe Name</strong> - The name of the item<br>
+              A recipe should match the In Game name of the item this is important for some shop functions.
+              <br>Recipe Names should not use any special characters, they will be replaced by an _ when saving or updating
+              <br>Recipe Names will be converted so the first letter of each word is capitalised, iron ore becomes - Iron Ore<br>
+              </li>
+              <li><strong>Yield per Craft</strong> - How many items this recipe creates</li> It is best to add a recipe for a single item.
+              <br>i.e. do not add separate recipes for 1, 5 and 10 items at a time, just enter the recipe for a single item.<br>
               <li><strong>Weight</strong> - The weight of the final crafted item (for 1 single item)</li>
+
               <li><strong>Ingredients</strong> - The ingredients used to make the Item</li>
-              <li>Click <strong>Add Ingerident</strong>&nbsp;to add a new item to the recipe<br />You can add as many ingredients as you need
-              <ul style="list-style-type: square;">
-              <li>An Ingredient can be:
+
+              <li>Click <strong>+ Add Ingredient</strong>&nbsp;to add a new ingredient and amount to the recipe<br />You can add as many ingredients as you need.
+
+
+              An Ingredient can be:
               <ul style="list-style-type: circle;">
               <li>A Raw Material</li>
               <li>A Recipe you previously created.</li>
               </ul>
-              </li>
-              </ul>
-              </li>
-              </ul>
-              <p>Click <strong>Create Recipe&nbsp;</strong>and your new product will appear i the list below.<br /><br />To Edit an existing recipe, click the <strong>Load</strong> Button.<br /><br />It will appear in the recipe Editor.<br />You can change the Weight, Name, Yeild and Ingredients then click <strong>Save Changes</strong>.<br /><br />You can Duplicate an existing recipe, after clicking <strong>Duplicate Recipe</strong><br />The new recipe will appear in the top Create new Recipe Area.<br />Just Give it a new name update the ingredients and click <strong>Create Recipe</strong></p>
+
+              <p>Click <strong>Create Recipe&nbsp;</strong>and your new product will appear i the list below.<br /><br />To Edit an existing recipe, click the <strong>Load</strong> Button.<br /><br />It will appear in the recipe Editor.<br />You can change the Weight, Name, Yeild and Ingredients then click <strong>Save Changes</strong>.<br /><br />You can Duplicate an existing recipe, after clicking <strong>Duplicate Recipe</strong><br />The new recipe will appear in the top Create new Recipe Area.<br />Just Give it a new name update the ingredients if needed and click <strong>Create Recipe</strong></p>
+
+              <p>You can add a recipe directly to an order by selecting how many and clicking the green Add to Order button
               <p>&nbsp;</p>
             `.trim()
                 },
                 {
-                    id: "inventory", name: "Stock Manager", desc: "Full overview of current stock levels across all items", help: `
+                    id: "inventory", name: "Stock Manager", desc: "Manage Stock Levels and Prices for all your items.", help: `
               <p><strong>Stock and Raw Materials Section - Stock Manger</strong></p>
               <p>The Stock Manager is vital in amaging your businesses warehouse and shop stock.<br /><br />By default only crafted items are listed as for sale in the shop.<br /><br />The main table has the following:</p>
               <ul>

@@ -7,41 +7,30 @@ const RawMaterials = {
 
         const line = document.createElement("div");
         line.className = "purchase-line";
-        line.style = "display:grid; grid-template-columns:3.5fr 1fr 1.5fr 1.5fr 1.2fr auto; gap:14px; align-items:center; margin-bottom:14px; padding:8px 0;";
+        line.style = "display:grid; grid-template-columns:3.5fr 1fr 1.5fr 1.5fr 1.2fr 1fr; gap:14px; align-items:center; margin-bottom:14px; padding:8px 0;";
 
         line.innerHTML = `
             <!-- ITEM SEARCH -->
             <div style="position:relative;">
-                <input type="text" class="item-search" placeholder="Search item..." 
-                       style="width:80%; padding:14px 16px; font-size:16px; background:#001122; border:1px solid #0af; border-radius:8px; color:white;">
-                <div class="search-results" 
-                     style="display:none; position:absolute; top:100%; left:0; right:0; background:#000; border:1px solid #0af; border-top:none; max-height:200px; overflow-y:auto; z-index:10; border-radius:0 0 8px 8px;">
+                    <input type="text" class="item-search" placeholder="Search item..."
+                        style="width:92%; padding:14px 16px; font-size:16px; background:#001122; border:1px solid #0af; border-radius:8px; color:white;">
+                    <div class="search-results"
+                        style="display:none; position:absolute; top:100%; left:0; right:0; background:#000; border:1px solid #0af; border-top:none; max-height:200px; overflow-y:auto; z-index:10; border-radius:0 0 8px 8px;">
+                    </div>
                 </div>
-            </div>
-    
-            <!-- QTY -->
-            <input type="number" class="qty-input" placeholder="Qty" min="1" value="1"
-                   style="padding:14px; font-size:16px; background:#001122; border:1px solid #0af; border-radius:8px; text-align:center;">
-    
-            <!-- PRICE PER UNIT (default active) -->
-            <input type="number" step="0.01" class="price-input active-input" placeholder="Price/unit"
-                   style="padding:14px; font-size:16px; background:#002200; border:1px solid #0f8; border-radius:8px; color:#0f8; font-weight:bold;">
-    
-            <!-- TOTAL PRICE (read-only until clicked) -->
-            <input type="number" step="0.01" class="total-input" placeholder="Total" readonly
-                   style="padding:14px; font-size:16px; background:#001122; border:1px solid #444; border-radius:8px; color:#0af; font-weight:bold;">
-    
-            <!-- LINE TOTAL DISPLAY -->
-            <div style="text-align:right; font-weight:bold; color:#0f8; font-size:20px; white-space:nowrap;" class="line-total">
-                $0.00
-            </div>
-    
-            <!-- REMOVE BUTTON -->
-            <button type="button" class="danger small" 
+                <input type="number" class="qty-input" placeholder="Qty" min="1" value="1"
+                    style="width:70%; padding:14px; font-size:16px; background:#001122; border:1px solid #0af; border-radius:8px; text-align:center;">
+                <input type="number" step="0.01" class="price-input active-input" placeholder="Price/unit"
+                    style="width:70%; padding:14px; font-size:16px; background:#002200; border:1px solid #0f8; border-radius:8px; color:#0f8; font-weight:bold;">
+                <input type="number" step="0.01" class="total-input" placeholder="Total" readonly
+                    style="width:60%; padding:14px; font-size:16px; background:#001122; border:1px solid #444; border-radius:8px; color:#0af; font-weight:bold;">
+                <div style="width:50%;text-align:right; font-weight:bold; color:#0f8; font-size:20px;"
+                    class="line-total">$0.00
+                </div>
+                <button type="button" class="danger small"
                     onclick="this.closest('.purchase-line').remove(); RawMaterials.updateMultiTotal()"
-                    style="padding:14px 18px; font-size:20px; font-weight:bold; border-radius:8px;">
-                Remove
-            </button>
+                    style="padding:14px 18px; font-size:20px; font-weight:bold; border-radius:8px;">Remove</button>
+            </div>
         `;
 
         container.appendChild(line);
@@ -221,16 +210,22 @@ const RawMaterials = {
         debouncedCalcRun();
     },
 
+    showMultiForm() {
+        const form = document.getElementById("sharedMultiPurchaseForm");
+        form.style.display = "block";
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+        form.querySelector(".item-search").focus();
+    },
+
     hideMultiForm() {
-        document.getElementById("multiPurchaseForm").style.display = "none";
-        document.getElementById("showMultiPurchaseBtn").style.display = "block";
+        document.getElementById("sharedMultiPurchaseForm").style.display = "none";
     },
 
     setupSearchListeners() {
         document.querySelectorAll(".item-search").forEach(input => {
             input.oninput = (e) => {
                 const val = e.target.value.toLowerCase();
-                const results = input.parentElement.querySelector(".search-results");
+                const results = input.parentElement.querySelector(".search-results"); // ← define here
                 results.innerHTML = "";
 
                 if (!val) {
@@ -261,25 +256,38 @@ const RawMaterials = {
                 results.style.display = allItems.length ? "block" : "none";
             };
 
-            input.onblur = () => setTimeout(() => results.style.display = "none", 200);
+            // Fixed blur handler — define results here too
+            input.onblur = () => {
+                const results = input.parentElement.querySelector(".search-results");
+                setTimeout(() => {
+                    if (results) results.style.display = "none";
+                }, 200);
+            };
         });
 
-        // Live recalc on ANY input change
+        // Live recalc on input change
         document.querySelectorAll(".qty-input, .price-input, .total-input").forEach(el => {
             el.oninput = () => RawMaterials.updateMultiTotal();
         });
     },
 
     init() {
-        document.getElementById("showMultiPurchaseBtn").onclick = () => {
-            document.getElementById("multiPurchaseForm").style.display = "block";
-            document.getElementById("showMultiPurchaseBtn").style.display = "none";
-            document.querySelector(".item-search").focus();
-        };
-
         this.setupSearchListeners();
         this.setupFieldSwitching();
         this.updateMultiTotal();
+        this.hideMultiForm();
+
+        // Button to show the form (from any page)
+        document.querySelectorAll(".show-purchase-btn").forEach(btn => {
+            btn.onclick = () => this.showMultiForm();
+        });
+
+        // Add line button — use event delegation because lines are added dynamically
+        document.getElementById("sharedMultiPurchaseForm").addEventListener("click", (e) => {
+            if (e.target && e.target.classList.contains("add-line-btn")) {
+                this.addPurchaseLine();
+            }
+        });
     },
 
     // ADD NEW RAW MATERIAL — BULLETPROOF
