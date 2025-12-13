@@ -466,6 +466,16 @@ const RecipeEditor = {
             }
 
             const row = document.createElement("tr");
+            // === DARKER ROW IF NO WEIGHT SET ===
+            if (weight === 0) {
+
+                row.style.background = "#0d1117";
+                row.style.borderLeft = "4px solid #0af";
+
+            } else {
+                row.style.background = "rgba(0, 170, 255, 0.08)";
+            }
+
             row.innerHTML = `
                 <td style="padding:12px; text-align:left;">${item}</td>
                 <td style="padding:12px; text-align:center;">${yieldAmt}</td>

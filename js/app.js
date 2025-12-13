@@ -1359,7 +1359,10 @@ const DropdownMenu = {
             tabs: [
                 {
                     id: "welcome", name: "Welcome", "desc": "Start Here!!", help: `
-                Welcome to the business manager
+                    <h2 class=""><b>Welcome to the Business Manager</b></h2>
+                    <p class=""><b>This application was built by DuhBuhHuh for any questions please contact me via discord&nbsp;<br></b><b style="font-family: inherit;">The Road to Somewhere - https://discord.gg/</b></p>
+
+                    <p>You are moments away from full management of your RP business!!!</p><p><br></p><p><br></p><p></p>
               `.trim()
                 }
             ]
@@ -1413,66 +1416,66 @@ const DropdownMenu = {
                 },
                 {
                     id: "raw", name: "Crafting Tree", desc: "See exact material requirements and warehouse usage", help: `
-              <p><strong>Orders Section - Crafting Tree<br /></strong>The craffting tree gives you a complete breakdown of your order:</p>
-              <ul>
-              <li>What materials you will need to craft the items.</li>
-              <li>How many of an item is needed.</li>
-              <li>cost and weight of the materials.</li>
-              </ul>
-              <p>At various stages in the tree you can choose to use items from your <strong>warehouse</strong>, or to <strong>craft</strong> the items needed manually.<br /><br />The tree will update the materials needed depending on wheter you select <strong>Craft</strong> or <strong>Warehouse</strong> as the source.<br /><br /><strong><em>The warehouse option will only be availiable if you have enough stock of that item in the warehouse.</em></strong></p>
-              <p>The table at the bottom will give you a complete breakdown of all the materials you will need to complete the order.</p>
-              <ul>
-              <li>The cost of the raw materials / crafted items needed to complete the production.</li>
-              <li>The weight of the Materilas used and FInal shipping weight.</li>
-              <li>The profit made on the order (based on the prices set in the Order Tab)</li>
-              </ul>
-              <p>You can remove an item from the order by clicking the red <strong>X</strong> in the item tree. This will also remove it from the table in the Order Section.
+              <<strong>Orders Section - Crafting Tree</strong><br>
+
+              <p><br></p><p>The crafting tree gives you a complete breakdown of your order:</p>
+                            <ul>
+                            <li>What materials you will need to craft the items.</li>
+                            <li>How many of an item is needed.</li>
+                            <li>cost and weight of the materials.</li>
+                            </ul>
+                            <p>At various stages in the tree you can choose to use items from your <strong>warehouse</strong>, or to <strong>craft</strong> the items needed manually.<br><br>The tree will update the materials needed depending on wheter you select <strong>Craft</strong> or <strong>Warehouse</strong> as the source.<br><br><strong><em>The warehouse option will only be availiable if you have enough stock of that item in the warehouse.</em></strong></p>
+                            <p>The table at the bottom will give you a complete breakdown of all the materials you will need to complete the order.</p>
+                            <ul>
+                            <li>The cost of the raw materials / crafted items needed to complete the production.</li>
+                            <li>The weight of the Materilas used and FInal shipping weight.</li>
+                            <li>The profit made on the order (based on the prices set in the Order Tab)</li>
+                            </ul>
+                            <p>You can remove an item from the order by clicking the red <strong>X</strong> in the item tree. This will also remove it from the table in the Order Section.<br><br>Ranch orders for produce will display the estimated amount of ingredients required to grow the amount of produce required,&nbsp;<br>the estimate is based on previous harvests done for that crop.</p>
             `.trim()
                 },
                 {
                     id: "profit", name: "Order Summary / Profit", desc: "Real-time cost, revenue and profit breakdown", help: `
-              <p><strong>Orders Section - Order Summary / Profit Section</strong></p>
-              <p>This provides a customer invoice showing per order items and totals.<br /><br />There is a Show Profit (internal View) Button <br />This toggles toggles the invoice between:</p>
-              <p><strong>*&nbsp;</strong><strong>Internal View - </strong>&nbsp;shows production costs and profit made&nbsp;</p>
-              <p><strong>Customer View</strong> - Hides Profit and manufacturing costs<br />(this version of the invoice and be copied and used to give directly to a customer)<br /><br />items marked by <strong>*</strong> will only appear on the Internal view</p>
-              <ul>
-              <li><strong>Quantity</strong> - The quantity of the item purchased</li>
-              <li><strong>Item</strong> - The name of the item purchases</li>
-              <li><strong>Price Tier</strong> - Shop Price or&nbsp; Bulk Price<br /> <em>(if a custom price has been set it will still use whatever option is selected from the price Teir on the order)</em></li>
-              <li><strong>Weight -</strong> The total weight of the items</li>
-              <li><strong>* Unit Cost -</strong> The manufacturing cost of the items</li>
-              <li><strong>Unit Price -</strong> The sale proce of the items</li>
-              <li><strong>Total - </strong>The toal price of the items</li>
-              </ul>
-              <p>Displayed at the bottom of the order:</p>
-              <ul>
-              <li><strong>Subtotal</strong> - The cost of all the items in the order</li>
-              <li><strong>* Cost</strong> to Produce - the production cost of asll the items in the order</li>
-              <li><strong>* Profit</strong> - The profit in $ and % for the order</li>
-              <li><strong>Total Due</strong> - Tatal payable by the customer for the order</li>
-              <li><strong>Total Weght</strong> - The total weight for all items in the order</li>
-              </ul>
-              <p>&nbsp;</p>
-              <p>&nbsp;</p>
+                    <p><strong>Orders Section - Order Summary / Profit Section</strong></p>
+                    <p>This provides a customer invoice showing per order items and totals.<br><br>There is a Show Profit (internal View) Button <br>This toggles toggles the invoice between:</p>
+                    <p><strong>*&nbsp;</strong><strong>Internal View - </strong>&nbsp;shows production costs and profit made&nbsp;</p>
+                    <p><strong>Customer View</strong> - Hides Profit and manufacturing costs<br>(this version of the invoice and be copied and used to give directly to a customer)<br><br>items marked by <strong>*</strong> will only appear on the Internal view</p>
+                    <ul>
+                    <li><strong>Quantity</strong> - The quantity of the item purchased</li>
+                    <li><strong>Item</strong> - The name of the item purchases</li>
+                    <li><strong>Price Tier</strong> - Shop Price or&nbsp; Bulk Price<br> <em>(if a custom price has been set it will still use whatever option is selected from the price Teir on the order)</em></li>
+                    <li><strong>Weight -</strong> The total weight of the items</li>
+                    <li><strong>* Unit Cost -</strong> The manufacturing cost of the items</li>
+                    <li><strong>Unit Price -</strong> The sale proce of the items</li>
+                    <li><strong>Total - </strong>The total price of the items</li>
+                    </ul>
+                    <p>Displayed at the bottom of the order:</p>
+                    <ul>
+                    <li><strong>* Cost to Produce</strong> - The raw cost of the order</li><li><strong>Subtotal</strong> - The cost of all the items in the order</li>
+                    <li><strong>* Profit</strong> - The profit in $ and % for the order</li>
+                    <li><strong>Total Due</strong> - Total payable by the customer for the order</li>
+                    <li><strong>Total Weight</strong> - The total weight for all items in the order</li>
+                    </ul>
+                    <p>&nbsp;</p>
+                    <p>&nbsp;</p>
             `.trim()
 
                 },
                 {
                     id: "completed", name: "Completed Orders", desc: "Archive of delivered orders with final profit", help: `
-              <p><strong>Orders Section - Completed Orders Section<br /></strong>A list of all orders that have been completed Customer, Shop and Warhouse Restocks</p>
-              <p>All completed customer orders will appear here.<br /><br />Orders can be filterd by date and or Employee.<br /><br />The table shows:</p>
-              <p><strong>Date</strong> - The date of the order</p>
-              <p><strong>ID</strong> - The Order Id (uniquley generated)</p>
-              <p><strong>Employee</strong> - The name of the Employee that made the sale</p>
-              <p><strong>Customer</strong> - The name of the Customer</p>
-              <p><strong>Items</strong> - A list of the items sold</p>
-              <p><strong>Weight</strong> - The weight of the items sold</p>
-              <p><strong>Sale Total</strong> - The total cost of the order</p>
-              <p><strong>Gross Profit</strong> - The total profit made on the order</p>
-              <p><strong>Comission</strong> - The comission rate and the amount in $<br /> <em>(shows the comission rate of the employee at the time of the sale)</em> </p>
-              <p><strong>Net Profit</strong> - The profit after comission is subtracted</p>
-              <p>The total amount of sales, Comission Net Profit and weight of all sales is shown at the bottom.<br /><br />If a filter has been applied it will show totals for sales matching those filters only.<br /><br /></p>
-              <p>&nbsp;</p>
+                    <p><strong>Orders Section - Completed Orders Section<br></strong></p><p><strong><br></strong>A list of all Customer orders that have been completed, Ware hose and shop restocks will not be saved here but in the main ledger</p><p>The table shows:</p>
+                    <p><strong>Date</strong> - The date of the order</p>
+                    <p><strong>ID</strong> - The Order Id (uniquley generated)</p>
+                    <p><strong>Employee</strong> - The name of the Employee that made the sale</p>
+                    <p><strong>Customer</strong> - The name of the Customer</p>
+                    <p><strong>Items</strong> - A list of the items sold</p>
+                    <p><strong>Weight</strong> - The weight of the items sold</p>
+                    <p><strong>Sale Total</strong> - The total cost of the order</p>
+                    <p><strong>Gross Profit</strong> - The total profit made on the order</p>
+                    <p><strong>Seller Commission</strong> - The commission rate and the amount in $<br> <em>(shows the commission rate of the employee at the time of the sale)</em> </p>
+                    <p><strong>Net Profit</strong> - The profit after commission is subtracted</p><p><b>Comission Satus</b> - Whether the commission has been paid or not.</p>
+                    <p>The total amount of sales, Commission Net Profit and weight of all sales is shown at the bottom.<br><br>To pay an employees commission select their name from the dropdown and set the dates you wish to pay the commission for.<br>Click the <span style="background-color: rgb(0, 255, 0);"><font color="#000000"><b>Pay commission Button</b></font></span> , the commission amount will be deducted from the businesses balance and stored in the leger.<br>Items commission have been paid for will be marked as Paid</p>
+                    <p>&nbsp;</p>
             `.trim()
                 }
             ]
@@ -1512,65 +1515,44 @@ const DropdownMenu = {
                 },
                 {
                     id: "recipes", name: "Recipe Manager", desc: "Create, edit and delete crafting recipes", help: `
-              <
-              p><strong>Recipe Manager</strong></p>
+                    <strong>Recipe Manager</strong><p></p>
 
-              <p>The recipe Manager is where you add all your craftable products.<br /><br />Recipes can be created from Raw Materials, Other Recipes or Both.<br /><br />Creating a recipe is simple:</p>
-              Click the yellow -  + Create New Recipe Button<br>
-              You will be presented with a form
-              <ul>
+                    <p>The recipe Manager is where you add all your craftable products.<br></p><ul><li>The list shows which recipes you currently have available.</li><li><b>Recipe Name</b> - The name of the Recipe</li><li><b>Yield</b> - How many items the recipe creates</li><li><b>Weight</b> - The weight of a single product</li><li><b>Ingredients</b> - A list of the ingredients and the raw cost of the ingredients used to make the recipe</li><li><b>Cost Price</b> - The raw cost of the recipe</li><li><b>Actions</b> - <ul><li><span style="background-color: rgb(255, 255, 0);"><font color="#000000">+ Create New Recipe</font></span>&nbsp;Button - Opens up the new Recipe Form</li><li>Input and <span style="background-color: rgb(0, 255, 0);"><font color="#000000"><b>Add to Order</b></font></span>&nbsp;Button&nbsp;<ul><li>Enter the number of items and click the button to add it to your current order</li></ul></li><li><span style="background-color: rgb(0, 225, 255);"><font color="#000000" style="">&nbsp;<b>Edit</b></font>&nbsp;</span>&nbsp;Button - Opens the form to update the Recipe</li><li><b style="background-color: rgb(255, 221, 0);">&nbsp;Duplicate&nbsp;</b>&nbsp; Button - Loads the recipe into the form to be Duplicated</li></ul></li></ul><p><b>Rows that have a darker colour indicate recipes that do not have a weight set.</b></p><p><br></p><p>Creating a recipe is simple:</p>
+                    Click the yellow -  <font color="#000000" style="background-color: rgb(255, 255, 0);"><b>+ <font style="">Create New Recipe Button</font></b></font><br>
+                    You will be presented with a form
+                    <ul>
 
-              <li><strong>Recipe Name</strong> - The name of the item<br>
-              A recipe should match the In Game name of the item this is important for some shop functions.
-              <br>Recipe Names should not use any special characters, they will be replaced by an _ when saving or updating
-              <br>Recipe Names will be converted so the first letter of each word is capitalised, iron ore becomes - Iron Ore<br>
-              </li>
-              <li><strong>Yield per Craft</strong> - How many items this recipe creates</li> It is best to add a recipe for a single item.
-              <br>i.e. do not add separate recipes for 1, 5 and 10 items at a time, just enter the recipe for a single item.<br>
-              <li><strong>Weight</strong> - The weight of the final crafted item (for 1 single item)</li>
+                    <li><strong>Recipe Name</strong> - The name of the item<ul><li>A recipe should match the In Game name of the item where possible - this is important for some shop functions.</li><li>note this may not always be possible as some In Game items may use special characters such as #</li><li>Names are automatically converted to use Uppercase for the First letter of each word.</li><li>e.g. "<b>my recipe</b>" becomes "<b>My Recipe</b>"</li><li>Do not use special characters ()#?0=%$</li><li>Special characters will be removed and replaced with _</li></ul></li>
+                    <li><strong>Yield per Craft</strong> - How many items this recipe creates<ul><li>It is best to add a recipe for a single item.</li><li>i.e. do not add separate recipes for 1, 5 and 10 items at a time, just enter the recipe for a single item.</li></ul></li>
+                    <li><strong>Weight</strong> - The weight of the final crafted item (for 1 single item)</li>
 
-              <li><strong>Ingredients</strong> - The ingredients used to make the Item</li>
-
-              <li>Click <strong>+ Add Ingredient</strong>&nbsp;to add a new ingredient and amount to the recipe<br />You can add as many ingredients as you need.
-
-
-              An Ingredient can be:
-              <ul style="list-style-type: circle;">
-              <li>A Raw Material</li>
-              <li>A Recipe you previously created.</li>
-              </ul>
-
-              <p>Click <strong>Create Recipe&nbsp;</strong>and your new product will appear i the list below.<br /><br />To Edit an existing recipe, click the <strong>Load</strong> Button.<br /><br />It will appear in the recipe Editor.<br />You can change the Weight, Name, Yeild and Ingredients then click <strong>Save Changes</strong>.<br /><br />You can Duplicate an existing recipe, after clicking <strong>Duplicate Recipe</strong><br />The new recipe will appear in the top Create new Recipe Area.<br />Just Give it a new name update the ingredients if needed and click <strong>Create Recipe</strong></p>
-
-              <p>You can add a recipe directly to an order by selecting how many and clicking the green Add to Order button
-              <p>&nbsp;</p>
+                    <li><strong>Ingredients</strong> - The ingredients used to make the Item<ul><li>Click <strong style="background-color: rgb(0, 255, 0);"><font color="#ffffff">+ Add Ingredient</font></strong>&nbsp;to add a new ingredient</li><li>Start typing the ingredients name and select it from the list</li><li>Enter how many of this item are required for the recipe</li></ul></li></ul><p></p><ul></ul><p></p><ul><li>Add as many ingredients as you need<ul><li>An ingredient can be:</li><li>A Raw Material</li><li>A Recipe you previously created<br><br></li></ul></li><li>Click <strong>Create Recipe&nbsp;</strong>and your new product will appear in the list</li></ul><p><br></p><p><br></p>
             `.trim()
                 },
                 {
                     id: "inventory", name: "Stock Manager", desc: "Manage Stock Levels and Prices for all your items.", help: `
-              <p><strong>Stock and Raw Materials Section - Stock Manger</strong></p>
-              <p>The Stock Manager is vital in amaging your businesses warehouse and shop stock.<br /><br />By default only crafted items are listed as for sale in the shop.<br /><br />The main table has the following:</p>
-              <ul>
-              <li><strong>Item</strong> - The name of the Item</li>
-              <li><strong>Type</strong> - Either a crafted item (from a recipe) or Raw Material</li>
-              <li><strong>Shop Display</strong> - The current number of items for sale in the shop<br />The total weight of those items is also displayed)</li>
-              <li><strong>Warehouse</strong> - The amount in the warehouse (can be updated)</li>
-              <li><strong>Min Stock</strong> - The minimum amount that should be for sale in the shop)</li>
-              <li><strong>Status</strong> - Wether the shop is stocked with enough items to equal the minimum stock amount</li>
-              <li><strong>Set Shop Stock</strong> - manually set the amount that is currently in the shop</li>
-              <li><strong>Actions</strong>:
-              <ul style="list-style-type: square;">
-              <li><strong> Return to warehouse</strong> Button<br />(Removes items from the shop and sends back to the warehouse</li>
-              <li><strong>Move * to display</strong> Button<br />Moves the * number of items from the warehouse to the shop<br />(only displays if there is enough stock in the warehouse)</li>
-              </ul>
-              </li>
-              </ul>
-              <p>The next set of items in the list&nbsp;Raw Materials are displayed.</p>
-              <p>Raw materials by default are not put on sale to the shop, <br />
-              If you wish to sell raw materials in your shop you may click the <strong>ADD TO SHOP DISPLAY</strong> Button.<br />
-              <br />This will add the raw material to your shop<br />
-              all the functions listed above will be available for that raw item.<br />
-              along with an extra option to remove the Raw Material from the shop.</p>
+                    <p><strong>Stock Manger</strong></p>
+                    <p>The Stock Manager is vital in managing pricing, shop and warehouse stock levels<br><br>By default only crafted items are listed as for sale in the shop.<br>All inputs automatically save after pressing enter or clicking outside of the input, there should be a green flash to indicate it saved ok.<br>The main table has the following:</p>
+                    <ul>
+                    <li><strong>Item</strong> - The name of the Item</li>
+                    <li><strong>Type</strong> - Either a crafted item (from a recipe) or Raw Material</li>
+                    <li><strong>Shop Price</strong>&nbsp;<ul><li>Raw Cost - the cost to produce the item</li><li>The Shop Price - Input automatically saves after editing/ updating.</li><li>Profit (shop) - Profit made when selling the item at this price</li><li>profit After Tax - How much profit will be made when selling this item via the vendor in your shop</li><li>margin - the profit margin when selling the item at this price</li><li>Margin after tax - Profit margin when selling via your vendor<br><br></li></ul></li>
+                    <li><b>Bulk Price&nbsp;</b>- Price for Bulk sales<ul><li>Raw Cost - the cost to produce the item</li><li>Profit (bulk) - Profit made when selling the item at this price</li><li>margin - the profit margin when selling the item at this price</li></ul></li>
+                    <li><strong>Warehouse Stock</strong> - How many of this item you have stored</li>
+                    <li><strong>For Sale in Shop</strong> - How many of this item are currently available to purchase via your vendor</li>
+                    <li><strong>Min Stock</strong> -The minimum number of this item that should be available to buy through the vendor</li><li>Status - Whether the shop has enough items to meet the minimum stock level</li>
+                    <li><strong>Actions</strong>:
+                    <ul style="list-style-type: square;">
+                    <li><strong> Return to warehouse</strong> Button<br>(Removes items from the shop and sends back to the warehouse</li>
+                    <li><strong>Move * to display</strong> Button<br>Moves the * number of items from the warehouse to the shop<br>(only displays if there is enough stock in the warehouse)</li><li>+ # To Order Button - adds enough of this item to the order to meet the min stock level</li>
+                    </ul>
+                    </li>
+                    </ul>
+                    <p>The next set of items in the are list&nbsp;Raw Materials on Display All Raw materials that have been added to the shop are listed here.</p><ul><li>All the options listed above are available, along with an additional button<ul><li>Remove from shop - Removes the Raw Material from the shop and back to the Raw materials section</li></ul></li></ul>
+                    <p>Raw materials by default are not put on sale to the shop, <br>
+                    If you wish to sell raw materials in your shop you may click the <strong>ADD TO SHOP DISPLAY</strong> Button.<br>
+                    <br>This will add the raw material to your shop<br>
+                    all the functions listed above will be available for that raw item.<br><br></p>
             `.trim()
                 }
             ]
