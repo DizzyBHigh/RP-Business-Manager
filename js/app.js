@@ -444,7 +444,7 @@ function renderPermissionsEditor() {
                 <h3>Permissions Editor</h3>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">`;
 
-    // === TAB PERMISSIONS (Viewer, Worker, Assistant columns) ===
+    // Tab permissions columns
     ["viewer", "worker", "assistant"].forEach(role => {
         html += `<div class="role-card" style="background:#1a1a2e;padding:15px;border-radius:8px;">
                     <h4 style="margin:0 0 10px;color:#0ff;">${role.toUpperCase()}</h4>`;
@@ -482,8 +482,8 @@ function renderPermissionsEditor() {
         html += `</div>`;
     });
 
-    // === ACTION PERMISSIONS (Full-width section) ===
-    html += `<div class="role-card" style="background:#1a1a2e;padding:20px;border-radius:8px;grid-column:1/-1;">
+    // Action Permissions - full-width below tabs
+    html += `<div class="role-card" style="background:#1a1a2e;padding:20px;border-radius:8px;grid-column:1/-1;margin-top:30px;">
                 <h4 style="margin:0 0 20px;color:#ff0;text-align:center;font-size:20px;">Action Permissions</h4>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;">`;
 
@@ -506,20 +506,18 @@ function renderPermissionsEditor() {
         html += `</div>`;
     });
 
-    html += `   </div> <!-- Close inner actions grid -->
-            </div> <!-- Close full-width actions card -->`;
+    html += `   </div>
+            </div>`;
 
-    // === CLOSE MAIN GRID ===
-    html += `   </div> <!-- End of main grid -->`;
-
-    // === SAVE BUTTON ===
-    html += `<div style="margin-top:40px;text-align:center;">
-                <button onclick="savePermissionsConfig()" 
-                        style="padding:16px 60px;background:#585eff;color:white;border:none;border-radius:12px;font-weight:bold;font-size:20px;">
-                    SAVE PERMISSIONS
-                </button>
-            </div>
-        </div> <!-- End container -->`;
+    // Close main grid and add save button
+    html += `   </div>
+                <div style="margin-top:40px;text-align:center;">
+                    <button onclick="savePermissionsConfig()" 
+                            style="padding:16px 60px;background:#585eff;color:white;border:none;border-radius:12px;font-weight:bold;font-size:20px;">
+                        SAVE PERMISSIONS
+                    </button>
+                </div>
+            </div>`;
 
     container.innerHTML = html;
 }
@@ -926,6 +924,21 @@ const App = {
                 });
                 App.save("rawMaterials");
                 App.save("craftedItems");
+            }
+
+            // Permissions load
+            if (data.permissions && typeof data.permissions === "object") {
+                permissionsConfig = { ...permissionsConfig, ...data.permissions };
+
+                // NEW: Safe actions merge
+                if (data.permissions.actions) {
+                    Object.keys(data.permissions.actions).forEach(action => {
+                        if (!permissionsConfig.actions[action]) {
+                            permissionsConfig.actions[action] = {};
+                        }
+                        permissionsConfig.actions[action] = { ...permissionsConfig.actions[action], ...data.permissions.actions[action] };
+                    });
+                }
             }
 
             applyPermissions();
