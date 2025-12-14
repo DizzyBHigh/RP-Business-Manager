@@ -387,7 +387,7 @@ const RawMaterials = {
                 </td>
                 <td style="text-align:center;padding:8px;">
                   <button class="danger small" onclick="RawMaterials.remove('${m}')"
-                          style="padding:8px 12px;font-size:13px;border-radius:6px;">Remove</button>
+                          style="padding:8px 12px;font-size:13px;border-radius:6px;${!hasPermission("canRemoveRawMaterials") ? 'display:none;' : ''}">Remove</button>
                 </td>
             `;
 
@@ -452,10 +452,15 @@ const RawMaterials = {
 
     // REMOVE RAW MATERIAL
     async remove(name) {
+        if (!hasPermission("canRemoveRawMaterials")) {
+            showToast("fail", "You do not have permission to remove raw materials");
+            return;
+        }
+
         const ok = await showConfirm(`Permanently delete "${name}" from raw materials?\nThis removes price & weight data.`);
         if (!ok) return;
 
-        // 2. FORCE DELETE IN FIRESTORE
+        // === DELETE FROM FIRESTORE ===
         try {
             await firebase.firestore().collection('business').doc('main').update({
                 [`rawPrice.${name}`]: firebase.firestore.FieldValue.delete()
@@ -467,14 +472,16 @@ const RawMaterials = {
             return;
         }
 
+        // === UPDATE LOCAL STATE ===
+        delete App.state.rawPrice[name];  // Immediately remove from local state
 
+        // === SAVE & RE-RENDER ===
         await App.save("rawPrice");
-        this.renderPrices();
+        this.renderPrices("");  // Full refresh from updated state
         debouncedCalcRun();
-        //PriceList.render();
         Inventory.render();
 
-        showToast("success", `"${name}" removed.`);
+        showToast("success", `"${name}" removed permanently.`);
     },
 
     renderEmployeeList() {

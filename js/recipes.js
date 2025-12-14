@@ -192,7 +192,8 @@ const RecipeEditor = {
             const buttonRow = document.createElement("div");
             buttonRow.style.cssText = "margin-top:28px; display:flex; gap:16px; justify-content:center; flex-wrap:wrap;";
 
-            const deleteBtn = isDuplicating ? '' : `
+            const deleteBtn = (isDuplicating || !hasPermission("canDeleteRecipes")) ?
+                `<span style="flex:1; color:#888; font-style:italic; padding:16px;">Delete restricted</span>` : `
                 <button onclick="RecipeEditor.del()" style="flex:1; min-width:220px; padding:16px 24px; background:#aa0000; color:white; font-weight:bold; font-size:19px; border:none; border-radius:12px; cursor:pointer;">
                     DELETE RECIPE
                 </button>`;
@@ -369,6 +370,10 @@ const RecipeEditor = {
     },
 
     async del() {
+        if (!hasPermission("canDeleteRecipes")) {
+            showToast("fail", "You do not have permission to delete recipes");
+            return;
+        }
         const nameField = document.getElementById("editItemName");
         if (!nameField) return showToast("fail", "No recipe loaded!");
 
@@ -524,6 +529,8 @@ const RecipeEditor = {
 
         tbody.innerHTML = "";
         tbody.appendChild(fragment);
+        // NEW: Apply permissions to hardcoded create button
+        applyRecipePermissions();
     },
 
     // Auto-fix ledger entries to match proper-cased recipe names
@@ -601,3 +608,23 @@ const RecipeEditor = {
     // Start checking
     tryFix();
 })();
+
+function applyRecipePermissions() {
+    const createButtonContainer = document.querySelector("#recipeTable th:last-child div");
+    const createButton = document.querySelector("#recipeTable button[onclick*='showCreateForm']");
+
+    if (hasPermission("canEditRecipes")) {
+        if (createButton) createButton.style.display = "block";
+        if (createButtonContainer) createButtonContainer.innerHTML = `
+            <button onclick="RecipeEditor.showCreateForm()"
+                style="background:rgb(189, 192, 20); color:black; font-weight:bold; font-size:16px; border:none; border-radius:12px; cursor:pointer;">
+                + CREATE NEW RECIPE
+            </button>
+        `;
+    } else {
+        if (createButton) createButton.style.display = "none";
+        if (createButtonContainer) {
+            createButtonContainer.innerHTML = `<span style="color:#666; font-style:italic;">(Create restricted)</span>`;
+        }
+    }
+}

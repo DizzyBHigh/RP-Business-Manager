@@ -334,14 +334,18 @@ let permissionsConfig = {
     assistant: ["welcome", "order", "pending", "raw", "profit", "inventory", "warehouse", "crafted", "pricelist", "categories", "employees", "rawpurchase", "completed", "shopsales"],
     // NEW: Granular action permissions (default false for lower roles)
     actions: {
-        canEditRawPrices: { manager: true, assistant: true, worker: false, viewer: false },
-        canEditRecipeWeights: { manager: true, assistant: true, worker: false, viewer: false },
         canEditRecipes: { manager: true, assistant: true, worker: false, viewer: false },
-        canPurchaseRawMaterials: { manager: true, assistant: true, worker: true, viewer: false },
-        canImportShopSales: { manager: true, assistant: true, worker: false, viewer: false },
-        canTransferStock: { manager: true, assistant: true, worker: false, viewer: false },
-        canEditMinStock: { manager: true, assistant: true, worker: false, viewer: false }
-    }
+        canDeleteRecipes: { manager: true, assistant: false, worker: false, viewer: false },
+        canEditRawPrices: { manager: true, assistant: true, worker: false, viewer: false },
+
+        //canEditRecipeWeights: { manager: true, assistant: true, worker: false, viewer: false },
+        //canPurchaseRawMaterials: { manager: true, assistant: true, worker: true, viewer: false },
+        //canImportShopSales: { manager: true, assistant: true, worker: false, viewer: false },
+        //canTransferStock: { manager: true, assistant: true, worker: false, viewer: false },
+        //canEditMinStock: { manager: true, assistant: true, worker: false, viewer: false },
+        //canRemoveRawMaterials: { manager: true, assistant: true, worker: false, viewer: false },
+
+    },
 };
 
 // Load permissions from Firebase ONCE at startup
@@ -418,12 +422,10 @@ function hasPermission(action) {
     return !!perms[myRole]; // True if role has flag
 }
 
-// Render editor (only for managers)
 function renderPermissionsEditor() {
     const container = document.getElementById("permissionsEditor");
     if (!container) return;
 
-    // Just wait — initRoles() will call us when ready
     if (!window.rolesLoaded) {
         console.log("Permissions editor: waiting for roles to load... (initRoles will render us)");
         return;
@@ -442,6 +444,7 @@ function renderPermissionsEditor() {
                 <h3>Permissions Editor</h3>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">`;
 
+    // === TAB PERMISSIONS (Viewer, Worker, Assistant columns) ===
     ["viewer", "worker", "assistant"].forEach(role => {
         html += `<div class="role-card" style="background:#1a1a2e;padding:15px;border-radius:8px;">
                     <h4 style="margin:0 0 10px;color:#0ff;">${role.toUpperCase()}</h4>`;
@@ -476,37 +479,47 @@ function renderPermissionsEditor() {
                     </label>`;
         });
 
-        // NEW: Action Permissions Section
-        html += `<h4 style="margin-top:20px;color:#ff0;">Action Permissions</h4>
-                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">`;
+        html += `</div>`;
+    });
 
-        Object.keys(permissionsConfig.actions || {}).forEach(action => {
-            html += `<div class="role-card" style="background:#1a1a2e;padding:15px;border-radius:8px;">
-                        <h5 style="margin:0 0 10px;color:#0af;">${action.replace("can", "Can ").replace(/([A-Z])/g, " $1").trim()}</h5>`;
+    // === ACTION PERMISSIONS (Full-width section) ===
+    html += `<div class="role-card" style="background:#1a1a2e;padding:20px;border-radius:8px;grid-column:1/-1;">
+                <h4 style="margin:0 0 20px;color:#ff0;text-align:center;font-size:20px;">Action Permissions</h4>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;">`;
 
-            ["manager", "assistant", "worker", "viewer"].forEach(role => {
-                const checked = permissionsConfig.actions[action][role] ? "checked" : "";
-                html += `<label style="display:block;margin:8px 0;font-size:14px;">
-                            <input type="checkbox" ${checked} 
-                                   data-action="${action}" data-role="${role}"
-                                   onchange="updateActionPermission(this)">
-                            ${role.toUpperCase()}
-                         </label>`;
-            });
+    Object.keys(permissionsConfig.actions || {}).forEach(action => {
+        const prettyName = action.replace("can", "Can ").replace(/([A-Z])/g, " $1").trim();
 
-            html += `</div>`;
+        html += `<div style="background:#0f0f1e;padding:15px;border-radius:8px;">
+                    <h5 style="margin:0 0 12px;color:#0af;font-size:16px;">${prettyName}</h5>`;
+
+        ["manager", "assistant", "worker", "viewer"].forEach(role => {
+            const checked = permissionsConfig.actions[action][role] ? "checked" : "";
+            html += `<label style="display:block;margin:8px 0;">
+                        <input type="checkbox" ${checked} 
+                               data-action="${action}" data-role="${role}"
+                               onchange="updateActionPermission(this)">
+                        <span style="color:#0cf;font-weight:bold;">${role.toUpperCase()}</span>
+                     </label>`;
         });
 
         html += `</div>`;
     });
 
-    html += `</div>
-                <div style="margin-top:20px;text-align:center;">
-                    <button onclick="savePermissionsConfig()" 
-                            style="padding:12px 30px;background:#585eff;color:white;border:none;border-radius:8px;font-weight:bold;">
-                        SAVE PERMISSIONS
-                    </button>
-                </div></div>`;
+    html += `   </div> <!-- Close inner actions grid -->
+            </div> <!-- Close full-width actions card -->`;
+
+    // === CLOSE MAIN GRID ===
+    html += `   </div> <!-- End of main grid -->`;
+
+    // === SAVE BUTTON ===
+    html += `<div style="margin-top:40px;text-align:center;">
+                <button onclick="savePermissionsConfig()" 
+                        style="padding:16px 60px;background:#585eff;color:white;border:none;border-radius:12px;font-weight:bold;font-size:20px;">
+                    SAVE PERMISSIONS
+                </button>
+            </div>
+        </div> <!-- End container -->`;
 
     container.innerHTML = html;
 }
@@ -933,6 +946,9 @@ const App = {
             RolesManager.render();
             renderPermissionsEditor();
             RecipeEditor.renderRecipeTable();
+            if (typeof applyRecipePermissions === "function") {
+                applyRecipePermissions();
+            }
             Crops.renderSeeds?.();
             Crops.renderHarvests?.();
             // Trigger search inputs to refresh dropdowns
