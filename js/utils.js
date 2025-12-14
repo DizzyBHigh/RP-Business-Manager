@@ -209,9 +209,8 @@ async function ensureCompanyId() {
 // ============================================
 
 function renderOnlineUsers() {
-    const target = document.getElementById("onlineList");
+    const target = document.getElementById("onlineList"); // change to your top bar element ID if different
     if (!target) {
-        // DOM not ready yet — try again in 100ms
         setTimeout(renderOnlineUsers, 100);
         return;
     }
@@ -221,35 +220,37 @@ function renderOnlineUsers() {
 
         snap.forEach(doc => {
             const d = doc.data();
-            if (!d?.name) return;
+            if (!d?.name || !d.online) return;
 
-            const lastSeenMs = d.lastSeen?.toMillis?.() || (d.lastSeen?.seconds ? d.lastSeen.seconds * 1000 : 0);
-            if (Date.now() - lastSeenMs > 90000) return;
+            const lastSeenMs = d.lastSeen?.toMillis?.() || (d.lastSeen?.seconds ? d.lastSeen.seconds * 1000 : Date.now());
+            if (Date.now() - lastSeenMs > 90000) return; // 90s timeout
 
-            onlineUsers.push({
-                name: d.name,
-                role: d.role || "assistant"
-            });
+            onlineUsers.push(d.name);
         });
 
-        onlineUsers.sort((a, b) => a.name.localeCompare(b.name));
+        onlineUsers.sort((a, b) => a.localeCompare(b));
 
         if (onlineUsers.length === 0) {
-            target.innerHTML = `<span style="color:#666; font-style:italic;">No one online</span>`;
+            target.innerHTML = `<span style="color:#666;">No one online</span>`;
             return;
         }
 
-        const rows = onlineUsers.map(u => `
-      <strong style="color:#0f8;">${u.name}</strong>
-    `).join(" • ");
+        const namesList = onlineUsers.map(u => `<strong style="color:#0f8;">${u.name}</strong>`).join(" • ");
 
         target.innerHTML = `
-      <span style="color:#0f8; font-weight:bold;">Online:</span>
-      <span style="background:#0f82; color:white; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:6px;">
-        ${onlineUsers.length}
-      </span>
-      ${rows}
-    `;
+    <span style="color:#0f8; font-weight:bold;">Online:</span>
+    <strong style="margin-left:6px;">${onlineUsers.length}</strong>
+    <span style="margin-left:8px; color:#0cf;">${namesList}</span>
+`;
+
+        // Add tooltip with full list if many users
+        if (onlineUsers.length > 5) {
+            target.title = "Online users:\n" + onlineUsers.map(u => `• ${u.name}`).join("\n");
+            target.style.cursor = "help";
+        }
+    }, err => {
+        console.warn("Online users failed:", err);
+        target.innerHTML = `<span style="color:#f66;">Error</span>`;
     });
 }
 
@@ -344,6 +345,16 @@ function deepMerge(target, source) {
     return target;
 }
 
+
+async function getOnlineCount() {
+    try {
+        const snap = await db.collection("business").doc("online").collection("users").get();
+        return snap.size;
+    } catch (err) {
+        console.warn("Failed to get online count:", err);
+        return 0;
+    }
+}
 /* function updatePageTitleAndHeader() {
     if (App.state.businessConfig?.name) {
         document.title = `${App.state.businessConfig.name} - HSRP Manager`;

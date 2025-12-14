@@ -42,9 +42,10 @@
         <!-- Online Users Panel -->
         <div id="onlineUsersPanel"
             style="margin-left:auto; display:flex; align-items:center; gap:12px; font-size:13px;">
-            <div id="onlineList" style="display:flex; gap:9px; align-items:center; flex-wrap:wrap; font-weight:500;">
+            <div id="onlineList" title=""
+                style="display:flex; gap:9px; align-items:center; flex-wrap:nowrap; overflow:hidden; white-space:nowrap; font-weight:500; cursor:help;">
+                <!-- Content filled by renderOnlineUsers() -->
             </div>
-
         </div>
     </div>
 
@@ -137,8 +138,8 @@
                 </div>
 
                 <div style="margin:50px 0; font-size:1.6em; color:#0f8;">
-                    Currently online: <strong id="onlineCount" style="font-size:2em; color:#0ff;">0</strong> team
-                    members
+                    <strong id="onlineCount" style="font-size:2em; color:#0ff;">0</strong>
+
                 </div>
 
                 <button onclick="location.reload()"

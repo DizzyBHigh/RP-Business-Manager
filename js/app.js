@@ -44,6 +44,7 @@ async function initRoles() {
         renderPermissionsEditor();
         RolesManager?.render?.();
         goOnline();
+        renderOnlineUsers()
 
     } catch (err) {
         console.error("initRoles failed:", err);
@@ -979,6 +980,7 @@ const App = {
                 if (el) el.dispatchEvent(new Event("input"));
             });
             EmployeeSelect.refreshAll();
+
         });
 
         // Fix ledger Dates

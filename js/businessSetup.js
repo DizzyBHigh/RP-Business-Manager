@@ -388,9 +388,7 @@ if (window.BusinessManager) {
 }
 
 function updateWelcomeScreen() {
-    // CORRECT CONDITION — wait until we have a name AND a real role
     if (!window.playerName || (!window.myRole && !App.state?.role)) {
-        // Still loading → try again
         setTimeout(updateWelcomeScreen, 400);
         return;
     }
@@ -401,22 +399,19 @@ function updateWelcomeScreen() {
     const viewerMsg = document.getElementById("viewerMessage");
     const countEl = document.getElementById("onlineCount");
 
-    // Company Name
     if (companyEl) {
         db.collection("business").doc("config").get().then(snap => {
             if (snap.exists && snap.data().name) {
                 companyEl.textContent = snap.data().name;
                 document.title = snap.data().name + " - HSRP Manager";
             }
-        }).catch(() => { });
+        }).catch(err => console.warn("Failed to load company name:", err));
     }
 
-    // Player Name
     if (nameEl) {
         nameEl.textContent = window.playerName || "Guest";
     }
 
-    // Role — FIXED: use the correct variable
     const currentRole = window.myRole || App.state?.role || "viewer";
     if (roleEl) {
         roleEl.textContent = currentRole.toUpperCase();
@@ -425,25 +420,24 @@ function updateWelcomeScreen() {
             assistant: "#0f8",
             worker: "#ff0",
             viewer: "#f66"
-        }[currentRole] || "#aaa";   // ← WAS myRole, now currentRole
+        }[currentRole] || "#aaa";
     }
 
-    // Viewer message
     if (viewerMsg) {
         viewerMsg.style.display = currentRole === "viewer" ? "block" : "none";
     }
 
-    // Online count — real-time
+    // Online Count — only one call, correct message
     if (countEl) {
-        const onlineRef = db.collection("business").doc("online").collection("users");
-        onlineRef.where("online", "==", true).onSnapshot(snap => {
-            const count = snap.size;
-            countEl.textContent = count;
-            countEl.parentElement.querySelector("span")?.remove(); // clean old text if needed
+        getOnlineCount().then(count => {
+            countEl.textContent = `Currently online: ${count} team member${count === 1 ? '' : 's'}`;
+            countEl.style.color = count > 0 ? "#0ff" : "#888";
+        }).catch(err => {
+            console.warn("Failed to update online count:", err);
+            countEl.textContent = "Currently online: Unknown";
         });
     }
 
-    // Optional: hide loading spinner / refresh button
     document.querySelectorAll(".loading-indicator, #refreshBtn").forEach(el => {
         if (el) el.style.display = "none";
     });
