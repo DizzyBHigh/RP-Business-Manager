@@ -78,44 +78,51 @@ const Inventory = {
                 
                 <td style="text-align:center; font-size:14px; font-weight: bold;">
                 <span style="color:#ee940e;">Raw Cost: </span>
-                <span style=" font-weight: bold; color:${costPrice >= 0 ? '#0f8' : '#f66'};">$${costPrice.toFixed(2)}</span><br>
-                    <input type="number" style="width: 82px; text-align: center; cursor: text;" class="shop-price-input" data-item="${item}" data-tier="shop"
+                <span style=" font-weight: bold; color:${costPrice >= 0 ? 'rgba(21, 255, 0, 1)' : '#f66'};">$${costPrice.toFixed(2)}</span><br>
+                    <input type="number" 
+                        style="width: 82px; text-align: center; cursor: text; font-weight: 900; color:${profitAfterTax > 0 ? '#0f8' : '#f66'};" 
+                        class="shop-price-input" data-item="${item}" data-tier="shop"
                         value="${shopPrice.toFixed(2)}" style="text-align:center; font-weight:bold;"
-                        placeholder="${(costPrice * 1.25).toFixed(2)}">
-                        <span style=" font-weight: bold; color:${profit >= 0 ? '#0f8' : '#f66'};">
-                            <br>
-                            <span style="font-weight: bold;color:#0e95d4;">Profit (shop):</span> 
-                            <span style=" font-weight: bold; color:${profit >= 0 ? '#0f8' : '#f66'};">$${profit.toFixed(2)}</span>
-                            <br>
-                            <span style="font-weight: bold;color:#0e95d4;">Profit After Tax:</span>
-                            <span style="font-weight: bold; color:${profitAfterTax >= 0 ? '#0ff' : '#f66'};">$${profitAfterTax.toFixed(2)}</span>
-                            <br>
-                            <span style="font-weight: bold;color:#0e95d4;">margin:</span>
-                            <span style="font-weight:bold;color:${sMargin >= 0 ? '#0f8' : '#f66'};">${sMargin.toFixed(2)}%</span>   
-                            <br>
-                            <span style="font-weight: bold;color:#0e95d4;">Margin after tax:</span>
-                            <span style="font-weight:bold;color:${sMarginAfterTax >= 0 ? '#0ff' : '#f66'};">${sMarginAfterTax.toFixed(1)}%</span>
-                        </td>
+                        placeholder="${(costPrice * 1.25).toFixed(2)}" 
+                        ${!hasPermission("canEditRawPrices") ? 'disabled' : ''}
+                    >
+                <span style=" font-weight: bold; color:${profit >= 0 ? '#0f8' : '#f66'};">
+                    <br>
+                    <span style="font-weight: bold;color:#0e95d4;">Profit (shop):</span> 
+                    <span style=" font-weight: bold; color:${profit >= 0 ? '#0f8' : '#f66'};">$${profit.toFixed(2)}</span>
+                    <br>
+                    <span style="font-weight: bold;color:#0e95d4;">Profit After Tax:</span>
+                    <span style="font-weight: bold; color:${profitAfterTax >= 0 ? '#0ff' : '#f66'};">$${profitAfterTax.toFixed(2)}</span>
+                    <br>
+                    <span style="font-weight: bold;color:#0e95d4;">margin:</span>
+                    <span style="font-weight:bold;color:${sMargin >= 0 ? '#0f8' : '#f66'};">${sMargin.toFixed(2)}%</span>   
+                    <br>
+                    <span style="font-weight: bold;color:#0e95d4;">Margin after tax:</span>
+                    <span style="font-weight:bold;color:${sMarginAfterTax >= 0 ? '#0ff' : '#f66'};">${sMarginAfterTax.toFixed(1)}%</span>
+                </td>
                 <td style="text-align:center; font-size:14px;">
                 <span style="font-weight:bold;color:#ee940e;">Raw Cost: </span>
                 <span style=" font-weight: bold; color:${costPrice >= 0 ? '#0f8' : '#f66'};">$${costPrice.toFixed(2)}</span><br>
                     <input type="number" class="bulk-price-input" data-item="${item}" data-tier="bulk"
-                        value="${(customPrices[item]?.bulk ?? costPrice * 1.10).toFixed(2)}" style="width:82px; text-align:center;"
-                        placeholder="${(costPrice * 1.10).toFixed(2)}">
+                        value="${(customPrices[item]?.bulk ?? costPrice * 1.10).toFixed(2)}" 
+                        style="width:82px; text-align:center; font-weight: 900; color:${bulkProfit > 0 ? '#0f8' : '#f66'};"
+                        placeholder="${(costPrice * 1.10).toFixed(2)}" ${!hasPermission("canEditRawPrices") ? 'disabled' : ''}>
                         <br>
                         <span style="font-weight: bold;color:#f0ec0f;">Profit (bulk):</span>
                         <span style="font-weight:bold;color:${profit >= 0 ? '#0f8' : '#f66'};">
                          $${bulkProfit.toFixed(2)}
                     </span><br>
                     <span style="font-weight: bold;color:#f0ec0f;">margin:</span>
-                        <span style="font-weight:bold;color:${bMargin >= 0 ? '#0f8' : '#f66'};">${bMargin.toFixed(2)}%</span>
-                </td>
+                    <span style="font-weight:bold;color:${bMargin >= 0 ? '#0f8' : '#f66'};">${bMargin.toFixed(2)}%</span>
+                    <br>&nbsp;
+                    <br>&nbsp;
+                    </td>
                 <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
                 <span style="color:#888;">Warehouse Stock</span><br>
                 <input type="number" min="0"
                         class=" warehouse-stock-input"
                         data-item="${item}"
-                        value="${warehouse}">
+                        value="${warehouse}" ${!hasPermission("canEditwarehouseStock") ? 'disabled' : ''}>
                     <br><span style="color:#0af;">${warehouseWeight}kg</span>
                 </td>
                 <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
@@ -123,7 +130,7 @@ const Inventory = {
                     <input type="number" min="0"
                         class="shop-stock-input"
                         data-item="${item}"
-                        value="${shop}">
+                        value="${shop}" ${!hasPermission("canEditShopStock") ? 'disabled' : ''}>
                     
                     <br><span style="color:#0af;">${shopWeight}kg</span>
                 </td>
@@ -133,17 +140,21 @@ const Inventory = {
                         class="min-stock-input"
                         data-item="${item}"
                         value="${min}"
-                        title="0 = Not on display"><br>&nbsp;
+                        title="0 = Not on display" ${!hasPermission("canEditShopStock") ? 'disabled' : ''}><br>&nbsp;
                 </td>
                 <td style="color:${low ? 'var(--red)' : 'var(--green)'};font-weight:bold;">
                     ${low ? 'LOW (-' + needed + ')' : 'OK'}
                 </td>
-                <td>
-                    ${addBtn}
-                    ${moveBtn}
-                    <button class="info small" onclick="Inventory.removeFromShop('${item}')">
-                        Return to Warehouse
-                    </button>
+                <td style="text-align:center;">
+                    ${hasPermission("canTransferStock") ? `
+                        ${addBtn}
+                        ${moveBtn}
+                        <button class="info small" onclick="Inventory.removeFromShop('${item}')" style="margin:4px;">
+                            Return to Warehouse
+                        </button>
+                    ` : `
+                        <span style="color:#888; font-style:italic; font-size:14px;">(Transfer restricted)</span>
+                    `}
                 </td>
             `;
             fragment.appendChild(row);
@@ -227,12 +238,11 @@ const Inventory = {
                     <td><strong>${raw}</strong></td>
                     <td>Raw Material</td>
                     
-                    
                     <td style="text-align:center; font-size:14px;">
                     <span style="font-weight:bold;color:#ee940e;">Raw Cost: </span>
                     <span style="font-weight:bold;color:${costPrice >= 0 ? '#0f8' : '#f66'};font-weight:bold;">$${costPrice.toFixed(2)}</span><br>
                         <input type="number" class="shop-price-input" data-item="${raw}" data-tier="shop"
-                            value="${shopPrice.toFixed(2)}" style="width:82px; text-align:center; font-weight:bold;"
+                            value="${shopPrice.toFixed(2)}" style="width:82px; text-align:center; font-weight:900; color:${profitAfterTax > 0 ? '#0f8' : '#f66'};"
                             placeholder="${(costPrice * 1.25).toFixed(2)}">
                             <br>
                             <span style="font-weight: bold;color:#0e95d4;">Profit (shop):</span>
@@ -250,7 +260,8 @@ const Inventory = {
                     <span style="font-weight:bold;color:#ee940e;">Raw Cost: </span>
                     <span style="color:${costPrice >= 0 ? '#0f8' : '#f66'};font-weight:bold;">$${costPrice.toFixed(2)}</span><br>
                         <input type="number" class="bulk-price-input" data-item="${raw}" data-tier="bulk"
-                            value="${(customPrices[raw]?.bulk ?? costPrice).toFixed(2)}" style="width:82px; text-align:center;"
+                            value="${(customPrices[raw]?.bulk ?? costPrice).toFixed(2)}" 
+                            style="width:82px; text-align:center; font-weight: 900; color:${profitAfterTax > 0 ? '#0f8' : '#f66'};"
                             placeholder="${(costPrice).toFixed(2)}">
                         <br>
                         <span style="font-weight: bold;color:#f0ec0f;">Profit (bulk):</span>
@@ -258,13 +269,17 @@ const Inventory = {
                         <br>
                         <span style="font-weight: bold;color:#f0ec0f;">margin:</span>
                         <span style="font-weight:bold;color:${bMargin >= 0 ? '#0f8' : '#f66'};">${bMargin.toFixed(2)}%</span>
-                    </td>
+                        <br>&nbsp;
+                        <br>&nbsp;
+                        </td>
                     <td style="text-align:center;font-weight:bold;color:var(--accent);font-size:16px;">
                         <span style="color:#888;">Warehouse Stock</span><br>
                         <input type="number" min="0"
                             class=" warehouse-stock-input"
                             data-item="${raw}"
-                            value="${warehouse}">
+                            value="${warehouse}"
+                            ${!hasPermission("canEditwarehouseStock") ? 'disabled' : ''}
+                            >
                         
                         <br><span style="color:#0af;">${warehouseWeight}kg</span>
                     </td>
@@ -273,7 +288,9 @@ const Inventory = {
                         <input type="number" min="0"
                             class=" shop-stock-input"
                             data-item="${raw}"
-                            value="${shop}">
+                            value="${shop}"
+                            ${!hasPermission("canEditShopStock") ? 'disabled' : ''}
+                            >
                         
                         <br><span style="color:#0af;">${shopWeight}kg</span>
                     </td>
@@ -283,7 +300,9 @@ const Inventory = {
                             class="min-stock-input"
                             data-item="${raw}"
                             value="${min}"
-                            title="0 = Not on display"><br>&nbsp;
+                            title="0 = Not on display"
+                            ${!hasPermission("canEditShopStock") ? 'disabled' : ''}
+                            ><br>&nbsp;
                     </td>
                     <td style="color:${low ? 'var(--red)' : 'var(--green)'};font-weight:bold;">
                         ${low ? 'LOW (-' + needed + ')' : 'OK'}

@@ -363,12 +363,17 @@ const RawMaterials = {
             const weight = (data?.weight !== undefined) ? data.weight : 0;
 
             const tr = document.createElement("tr");
+            if (!hasPermission("canEditRawPrices")) {
+                tr.style.opacity = "0.6";
+                tr.title = "Edit permission required";
+            }
             tr.innerHTML = `
                 <td style="font-weight:bold;color:var(--accent);padding:10px;">${m}</td>
                 <td style="padding:8px;">
                   <input type="number" step="0.01" value="${price.toFixed(2)}" 
                          class="priceInput auto-save-input"
                          data-item="${m}"
+                         ${!hasPermission("canEditRawPrices") ? 'disabled' : ''}
                          style="width:110px;background:#111;color:white;border:1px solid #444;padding:8px;border-radius:4px;font-size:14px;">
                   <small style="color:#888;margin-left:6px;">$/unit</small>
                 </td>
@@ -376,12 +381,13 @@ const RawMaterials = {
                   <input type="number" step="0.01" value="${weight.toFixed(2)}" 
                          class="weightInput auto-save-input"
                          data-item="${m}"
+                         ${!hasPermission("canEditRawPrices") ? 'disabled' : ''}
                          style="width:100px;background:#001122;color:#0af;border:2px solid #00aaff;padding:8px;border-radius:4px;font-weight:bold;font-size:14px;">
                   <strong style="color:#0af;margin-left:8px;">kg/unit</strong>
                 </td>
                 <td style="text-align:center;padding:8px;">
                   <button class="danger small" onclick="RawMaterials.remove('${m}')"
-                          style="padding:8px 12px;font-size:13px;border-radius:6px;">Remove</button>
+                          style="padding:8px 12px;font-size:13px;border-radius:6px;${!hasPermission("canRemoveRawMaterials") ? 'display:none;' : ''}">Remove</button>
                 </td>
             `;
 
@@ -446,10 +452,15 @@ const RawMaterials = {
 
     // REMOVE RAW MATERIAL
     async remove(name) {
+        if (!hasPermission("canRemoveRawMaterials")) {
+            showToast("fail", "You do not have permission to remove raw materials");
+            return;
+        }
+
         const ok = await showConfirm(`Permanently delete "${name}" from raw materials?\nThis removes price & weight data.`);
         if (!ok) return;
 
-        // 2. FORCE DELETE IN FIRESTORE
+        // === DELETE FROM FIRESTORE ===
         try {
             await firebase.firestore().collection('business').doc('main').update({
                 [`rawPrice.${name}`]: firebase.firestore.FieldValue.delete()
@@ -461,14 +472,16 @@ const RawMaterials = {
             return;
         }
 
+        // === UPDATE LOCAL STATE ===
+        delete App.state.rawPrice[name];  // Immediately remove from local state
 
+        // === SAVE & RE-RENDER ===
         await App.save("rawPrice");
-        this.renderPrices();
+        this.renderPrices("");  // Full refresh from updated state
         debouncedCalcRun();
-        //PriceList.render();
         Inventory.render();
 
-        showToast("success", `"${name}" removed.`);
+        showToast("success", `"${name}" removed permanently.`);
     },
 
     renderEmployeeList() {
@@ -542,8 +555,7 @@ document.getElementById("newRawName")?.addEventListener("input", function (e) {
 // AUTO-SAVE PRICE & WEIGHT ON BLUR — GREEN FLASH ON INPUT ONLY
 document.getElementById("rawTable")?.addEventListener("focusout", function (e) {
     const input = e.target;
-    if (!input.classList.contains("auto-save-input")) return;
-
+    if (!input.classList.contains("auto-save-input") || input.disabled) return; // NEW: Skip if disabled
     const item = input.dataset.item;
     if (!item) return;
 
