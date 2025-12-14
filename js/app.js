@@ -353,16 +353,15 @@ async function loadPermissionsConfig() {
     try {
         const snap = await ROLES_DOC.get();
         const data = snap.data() || {};
-
         if (data.permissions && typeof data.permissions === "object") {
+            // Merge tab permissions (existing)
             permissionsConfig = { ...permissionsConfig, ...data.permissions };
 
-            // Deep merge actions if present (preserves defaults)
-            if (data.permissions.actions) {
+            // NEW: Safe merge for actions — preserves defaults if missing in Firebase
+            if (data.permissions.actions && typeof data.permissions.actions === "object") {
                 Object.keys(data.permissions.actions).forEach(action => {
-                    if (!permissionsConfig.actions[action]) {
-                        permissionsConfig.actions[action] = {};
-                    }
+                    if (!permissionsConfig.actions) permissionsConfig.actions = {};
+                    if (!permissionsConfig.actions[action]) permissionsConfig.actions[action] = {};
                     permissionsConfig.actions[action] = {
                         ...permissionsConfig.actions[action],
                         ...data.permissions.actions[action]
@@ -371,9 +370,8 @@ async function loadPermissionsConfig() {
             }
             console.log("Permissions loaded from Firebase:", permissionsConfig);
         } else {
-            console.log("No custom permissions — using defaults");
+            console.log("No custom permissions — using defaults (including actions)");
         }
-
         applyPermissions();
         renderPermissionsEditor();
     } catch (err) {
@@ -444,7 +442,6 @@ function renderPermissionsEditor() {
                 <h3>Permissions Editor</h3>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">`;
 
-    // Tab permissions columns
     ["viewer", "worker", "assistant"].forEach(role => {
         html += `<div class="role-card" style="background:#1a1a2e;padding:15px;border-radius:8px;">
                     <h4 style="margin:0 0 10px;color:#0ff;">${role.toUpperCase()}</h4>`;
@@ -482,7 +479,6 @@ function renderPermissionsEditor() {
         html += `</div>`;
     });
 
-    // Action Permissions - full-width below tabs
     html += `<div class="role-card" style="background:#1a1a2e;padding:20px;border-radius:8px;grid-column:1/-1;margin-top:30px;">
                 <h4 style="margin:0 0 20px;color:#ff0;text-align:center;font-size:20px;">Action Permissions</h4>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;">`;
@@ -509,7 +505,6 @@ function renderPermissionsEditor() {
     html += `   </div>
             </div>`;
 
-    // Close main grid and add save button
     html += `   </div>
                 <div style="margin-top:40px;text-align:center;">
                     <button onclick="savePermissionsConfig()" 
