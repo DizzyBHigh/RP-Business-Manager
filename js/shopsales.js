@@ -120,7 +120,7 @@ function importFromTextarea() {
 
     if (sales.length === 0) return showToast("fail", 'No valid sales found');
 
-    // Combine same items (already done, but make sure)
+    // Combine same items
     const map = {};
     sales.forEach(s => {
         if (!map[s.item]) map[s.item] = { qty: 0, total: 0 };
@@ -128,80 +128,209 @@ function importFromTextarea() {
         map[s.item].total += s.total;
     });
 
-    const finalItems = Object.keys(map).map(item => {
+    let finalItems = Object.keys(map).map(item => {
         const qty = map[item].qty;
         const total = map[item].total;
         const unitPrice = total / qty;
 
-        // KEEP costPerUnit — it's valuable!
         const costPerUnit = Calculator.cost(item) || 0;
         const totalCost = costPerUnit * qty;
         const profit = total - totalCost;
 
         return {
+            original: item,
             item,
             qty,
             total,
             unitPrice: unitPrice.toFixed(2),
-            costPerUnit: costPerUnit.toFixed(2),     // Kept!
-            totalCost: totalCost.toFixed(2),         // Kept!
-            profit: profit.toFixed(2)                // Main thing we want
+            costPerUnit: costPerUnit.toFixed(2),
+            totalCost: totalCost.toFixed(2),
+            profit: profit.toFixed(2)
         };
     });
 
-    const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10);
-    const timeStr = today.toTimeString().slice(0, 8).replace(/:/g, '');
+    // === FUZZY MATCHING SETUP ===
+    const allKnownItems = [
+        ...Object.keys(App.state.recipes || {}),
+        ...Object.keys(App.state.rawPrice || {})
+    ];
 
-    // UNIQUE BATCH ID — one per import
-    const batchId = `SHOP-${dateStr.replace(/-/g, '').slice(2)}-${timeStr}`;
+    function levenshtein(a, b) {
+        const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
+        for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
+        for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
+        for (let j = 1; j <= b.length; j++) {
+            for (let i = 1; i <= a.length; i++) {
+                const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
+                matrix[j][i] = Math.min(
+                    matrix[j][i - 1] + 1,
+                    matrix[j - 1][i] + 1,
+                    matrix[j - 1][i - 1] + indicator
+                );
+            }
+        }
+        return matrix[b.length][a.length];
+    }
 
-    const grandTotal = finalItems.reduce((a, b) => a + b.total, 0);
-    // Get current tax rate
-    const taxRate = App.state.shopTaxRate || 0.08;
-    const grandTax = grandTotal * taxRate;
-    const grandNet = grandTotal - grandTax;
-    const grandProfit = finalItems.reduce((a, b) => a + parseFloat(b.profit), 0);
+    function similarity(a, b) {
+        if (!a || !b) return 0;
+        const distance = levenshtein(a.toLowerCase(), b.toLowerCase());
+        const longer = Math.max(a.length, b.length);
+        return longer === 0 ? 1 : (longer - distance) / longer;
+    }
 
-    // Create ONE ledger entry per item type
-    finalItems.forEach((s, index) => {
-        const itemTax = s.total * taxRate;
-        const itemNet = s.total - itemTax;
+    function findBestMatch(name) {
+        let best = null;
+        let bestScore = 0;
+        allKnownItems.forEach(known => {
+            const score = similarity(name, known);
+            if (score > bestScore && score >= 0.75) {
+                best = known;
+                bestScore = score;
+            }
+        });
+        return bestScore >= 0.75 ? { match: best, score: bestScore } : null;
+    }
+    // === END FUZZY SETUP ===
 
-        const record = {
-            id: `${batchId}-${String(index + 1).padStart(3, '0')}`,
-            batchId: batchId,
+    // Detect unknown items and find suggestions
+    const unknownItems = finalItems.filter(s =>
+        !(App.state.recipes[s.item] || App.state.rawPrice[s.item])
+    );
+
+    let suggestions = [];
+    let correctedCount = 0;
+
+    if (unknownItems.length > 0) {
+        unknownItems.forEach(u => {
+            const suggestion = findBestMatch(u.original);
+            if (suggestion) {
+                suggestions.push({
+                    from: u.original,
+                    to: suggestion.match,
+                    score: suggestion.score
+                });
+            }
+        });
+
+        // Build rich HTML message for showConfirm
+        let message = `<strong style="color:#ff0; font-size:18px;">⚠️ ${unknownItems.length} UNKNOWN ITEM(S) DETECTED ⚠️</strong><br><br>`;
+        message += `These items do not exactly match any recipe or raw material.<br>`;
+        message += `Shop stock will <strong>not</strong> be deducted unless corrected.<br><br>`;
+
+        if (suggestions.length > 0) {
+            message += `<strong style="color:#0f8;">Suggested auto-corrections (≥75% match):</strong><br><br>`;
+            suggestions.forEach(sug => {
+                const itemData = finalItems.find(f => f.original === sug.from);
+                message += `<strong>"${sug.from}"</strong> → <strong style="color:#0af;">"${sug.to}"</strong> (${(sug.score * 100).toFixed(0)}% match)<br>`;
+                message += `<small>${itemData.qty}× sold — $${itemData.total.toFixed(2)}</small><br><br>`;
+            });
+            message += `<strong style="color:#0f8;">Apply these ${suggestions.length} correction(s)?</strong><br><br>`;
+            correctedCount = suggestions.length;
+        }
+
+        message += `<strong>Full list:</strong><br><br>`;
+        unknownItems.forEach(u => {
+            const sug = suggestions.find(s => s.from === u.original);
+            message += `• ${u.qty}× <strong>${u.item}</strong> — $${u.total.toFixed(2)}`;
+            if (sug) message += ` <span style="color:#0f8;">(will be corrected)</span>`;
+            else message += ` <span style="color:#fa0;">(no suggestion)</span>`;
+            message += `<br>`;
+        });
+
+        message += `<br><br><strong>Continue with import?</strong>`;
+
+        // Use your app's showConfirm instead of native confirm
+        showConfirm(message, () => {
+            // User clicked YES — proceed with import
+
+            // Apply auto-corrections
+            if (suggestions.length > 0) {
+                suggestions.forEach(sug => {
+                    const index = finalItems.findIndex(f => f.original === sug.from);
+                    if (index !== -1) {
+                        finalItems[index].item = sug.to; // Use corrected name
+                    }
+                });
+                showToast("success", `Auto-corrected ${suggestions.length} item name(s)! Stock will update correctly.`);
+            } else if (unknownItems.length > 0) {
+                showToast("warn", `${unknownItems.length} item(s) remain unknown — stock unchanged for them`);
+            }
+
+            // === CONTINUE WITH IMPORT (same as before) ===
+            proceedWithImport(finalItems);
+        }, () => {
+            showToast("info", "Import cancelled — you can fix OCR text or add correction rules");
+        });
+
+        return; // Stop here — wait for user confirmation
+    }
+
+    // If no unknowns, proceed immediately
+    proceedWithImport(finalItems);
+
+    // === EXTRACTED IMPORT LOGIC INTO A FUNCTION ===
+    function proceedWithImport(items) {
+        const today = new Date();
+        const dateStr = today.toISOString().slice(0, 10);
+        const timeStr = today.toTimeString().slice(0, 8).replace(/:/g, '');
+
+        const batchId = `SHOP-${dateStr.replace(/-/g, '').slice(2)}-${timeStr}`;
+
+        const grandTotal = items.reduce((a, b) => a + b.total, 0);
+        const taxRate = App.state.shopTaxRate || 0.08;
+
+        // Ledger entries (using possibly corrected item names)
+        items.forEach((s, index) => {
+            const itemTax = s.total * taxRate;
+            const itemNet = s.total - itemTax;
+
+            const record = {
+                id: `${batchId}-${String(index + 1).padStart(3, '0')}`,
+                batchId: batchId,
+                date: dateStr,
+                time: today.toTimeString().slice(0, 8),
+                type: "shop_sale_item",
+                item: s.item,
+                qty: s.qty,
+                unitPrice: parseFloat(s.unitPrice),
+                total: s.total,
+                amount: itemNet,
+                taxAmount: itemTax,
+                taxRate: taxRate,
+                profit: parseFloat(s.profit),
+                employee: "Auto-Import",
+                description: `${s.item} × ${s.qty} sold — Profit: $${s.profit} | Tax: $${itemTax.toFixed(2)}`
+            };
+            App.state.ledger.push(record);
+        });
+
+        // Deduct stock for known (or corrected) items
+        items.forEach(s => {
+            if (App.state.recipes[s.item] || App.state.rawPrice[s.item]) {
+                App.state.shopStock[s.item] = Math.max(0, (App.state.shopStock[s.item] || 0) - s.qty);
+            }
+        });
+
+        App.save("shopStock");
+        App.save("ledger");
+
+        showToast("success", `Imported ${items.length} item types — $${grandTotal.toFixed(2)} total!${correctedCount > 0 ? ` (${correctedCount} auto-corrected)` : ''}`);
+
+        Inventory.render();
+        Ledger.render();
+        showTodaySales({
+            items: items,
+            totalSale: grandTotal,
+            totalProfit: grandTotal - items.reduce((a, b) => a + (parseFloat(b.costPerUnit) * b.qty), 0),
             date: dateStr,
-            time: today.toTimeString().slice(0, 8),
-            type: "shop_sale_item",
-            item: s.item,
-            qty: s.qty,
-            unitPrice: parseFloat(s.unitPrice),
-            total: s.total,           // Gross
-            amount: itemNet,          // Net cash received
-            taxAmount: itemTax,       // Tax paid
-            taxRate: taxRate,         // Rate at time of sale
-            profit: parseFloat(s.profit),
-            employee: "Auto-Import",
-            description: `${s.item} × ${s.qty} sold — Profit: $${s.profit} | Tax: $${itemTax.toFixed(2)}`
-        };
-        App.state.ledger.push(record);
-    });
-
-    // Deduct stock
-    finalItems.forEach(s => {
-        App.state.shopStock[s.item] = Math.max(0, (App.state.shopStock[s.item] || 0) - s.qty);
-    });
-    App.save("shopStock");
-    App.save("ledger");
-
-    showToast("success", `SUCCESS! Imported ${finalItems.length} item types (${sales.reduce((a, b) => a + b.qty, 0)} units) — $${grandTotal.toFixed(2)} total!`);
-
-    Inventory.render();
-    Ledger.render();
-    showTodaySales({ items: finalItems, totalSale: grandTotal, totalProfit: grandTotal - finalItems.reduce((a, b) => a + (b.costPerUnit * b.qty), 0), date: dateStr, batchId });
-    ShopSales.render();
+            batchId
+        });
+        ShopSales.render();
+    }
 }
+
+
 
 // Initialise Corrections
 let CORRECTIONS = {};

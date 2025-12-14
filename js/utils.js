@@ -329,6 +329,21 @@ function debugCost(item) {
     });
 }
 
+function deepMerge(target, source) {
+    if (typeof source !== 'object' || source === null) return source;
+    if (typeof target !== 'object' || target === null) target = Array.isArray(source) ? [] : {};
+
+    Object.keys(source).forEach(key => {
+        if (typeof source[key] === 'object' && source[key] !== null && !Array.isArray(source[key])) {
+            target[key] = deepMerge(target[key], source[key]);
+        } else {
+            target[key] = source[key];
+        }
+    });
+
+    return target;
+}
+
 /* function updatePageTitleAndHeader() {
     if (App.state.businessConfig?.name) {
         document.title = `${App.state.businessConfig.name} - HSRP Manager`;

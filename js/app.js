@@ -331,7 +331,17 @@ function goOnline() {
 let permissionsConfig = {
     viewer: ["welcome"],
     worker: ["welcome", "order", "pending", "raw", "profit", "inventory", "warehouse", "crafted", "shopsales", "rawpurchase", "completed"],
-    assistant: ["welcome", "order", "pending", "raw", "profit", "inventory", "warehouse", "crafted", "pricelist", "categories", "employees", "rawpurchase", "completed", "shopsales"]
+    assistant: ["welcome", "order", "pending", "raw", "profit", "inventory", "warehouse", "crafted", "pricelist", "categories", "employees", "rawpurchase", "completed", "shopsales"],
+    // NEW: Granular action permissions (default false for lower roles)
+    actions: {
+        canEditRawPrices: { manager: true, assistant: true, worker: false, viewer: false },
+        canEditRecipeWeights: { manager: true, assistant: true, worker: false, viewer: false },
+        canEditRecipes: { manager: true, assistant: true, worker: false, viewer: false },
+        canPurchaseRawMaterials: { manager: true, assistant: true, worker: true, viewer: false },
+        canImportShopSales: { manager: true, assistant: true, worker: false, viewer: false },
+        canTransferStock: { manager: true, assistant: true, worker: false, viewer: false },
+        canEditMinStock: { manager: true, assistant: true, worker: false, viewer: false }
+    }
 };
 
 // Load permissions from Firebase ONCE at startup
@@ -342,6 +352,19 @@ async function loadPermissionsConfig() {
 
         if (data.permissions && typeof data.permissions === "object") {
             permissionsConfig = { ...permissionsConfig, ...data.permissions };
+
+            // Deep merge actions if present (preserves defaults)
+            if (data.permissions.actions) {
+                Object.keys(data.permissions.actions).forEach(action => {
+                    if (!permissionsConfig.actions[action]) {
+                        permissionsConfig.actions[action] = {};
+                    }
+                    permissionsConfig.actions[action] = {
+                        ...permissionsConfig.actions[action],
+                        ...data.permissions.actions[action]
+                    };
+                });
+            }
             console.log("Permissions loaded from Firebase:", permissionsConfig);
         } else {
             console.log("No custom permissions — using defaults");
@@ -382,6 +405,17 @@ function updatePermission(checkbox) {
     } else {
         permissionsConfig[role] = permissionsConfig[role].filter(t => t !== tab);
     }
+}
+
+// NEW: Helper for granular action permissions
+function hasPermission(action) {
+    const myRole = window.myRole || App.state?.role || "viewer";
+    if (myRole === "manager") return true; // Managers always can
+
+    const perms = permissionsConfig.actions?.[action];
+    if (!perms) return false; // Unknown action = no
+
+    return !!perms[myRole]; // True if role has flag
 }
 
 // Render editor (only for managers)
@@ -440,6 +474,27 @@ function renderPermissionsEditor() {
                             onchange="updatePermission(this)">
                         ${name}
                     </label>`;
+        });
+
+        // NEW: Action Permissions Section
+        html += `<h4 style="margin-top:20px;color:#ff0;">Action Permissions</h4>
+                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">`;
+
+        Object.keys(permissionsConfig.actions || {}).forEach(action => {
+            html += `<div class="role-card" style="background:#1a1a2e;padding:15px;border-radius:8px;">
+                        <h5 style="margin:0 0 10px;color:#0af;">${action.replace("can", "Can ").replace(/([A-Z])/g, " $1").trim()}</h5>`;
+
+            ["manager", "assistant", "worker", "viewer"].forEach(role => {
+                const checked = permissionsConfig.actions[action][role] ? "checked" : "";
+                html += `<label style="display:block;margin:8px 0;font-size:14px;">
+                            <input type="checkbox" ${checked} 
+                                   data-action="${action}" data-role="${role}"
+                                   onchange="updateActionPermission(this)">
+                            ${role.toUpperCase()}
+                         </label>`;
+            });
+
+            html += `</div>`;
         });
 
         html += `</div>`;
@@ -505,6 +560,13 @@ async function applyPermissions(data) {
             }
         });
 
+        if (document.querySelector("#rawTable")) {
+            document.querySelectorAll("#rawTable .priceInput, #rawTable .weightInput").forEach(input => {
+                input.disabled = !hasPermission("canEditRawPrices");
+                input.style.opacity = input.disabled ? "0.6" : "";
+            });
+        }
+
         document.getElementById("roleWatermark")?.remove();
         return;
     }
@@ -546,6 +608,17 @@ async function applyPermissions(data) {
     } else {
         document.getElementById("roleWatermark")?.remove();
     }
+}
+
+// NEW: Handler for action permission checkboxes
+function updateActionPermission(checkbox) {
+    const action = checkbox.dataset.action;
+    const role = checkbox.dataset.role;
+    if (!permissionsConfig.actions[action]) {
+        permissionsConfig.actions[action] = {};
+    }
+    permissionsConfig.actions[action][role] = checkbox.checked;
+    console.log(`Updated ${action} for ${role}: ${checkbox.checked}`);
 }
 
 // Function to explicitly ensure passphrase inputs are enabled
@@ -786,6 +859,7 @@ const App = {
     },
 
 
+
     // Load everything once + real-time listener
     init() {
         console.log("Connecting to shared business data...");
@@ -809,7 +883,15 @@ const App = {
                 data.order = [];  // KILL SWITCH
             }
 
-            Object.assign(App.state, data);
+            // SAFE MERGE INSTEAD OF OVERWRITE
+            // Merge top-level fields
+            Object.keys(data).forEach(key => {
+                if (typeof data[key] === 'object' && data[key] !== null && !Array.isArray(data[key])) {
+                    App.state[key] = deepMerge(App.state[key] || {}, data[key]);
+                } else {
+                    App.state[key] = data[key];
+                }
+            });
 
             // OCR Corrections
             if (doc.data().ocrCorrections) {
@@ -910,21 +992,28 @@ const App = {
 
         const snap = await this.userDoc.get();
         if (snap.exists) {
-            Object.assign(this.state, snap.data());
+            const data = snap.data() || {};
+
+            // SAFE MERGE — SAME AS IN onSnapshot
+            Object.keys(data).forEach(key => {
+                if (typeof data[key] === 'object' && data[key] !== null && !Array.isArray(data[key])) {
+                    this.state[key] = deepMerge(this.state[key] || {}, data[key]);
+                } else {
+                    this.state[key] = data[key];
+                }
+            });
         }
 
         // ── Restore UI preferences from namespaced localStorage ──
         const uiKeys = ["currentEmployee", "currentCustomer", "lastTab", "lastSection", "orderMode"];
-
-        // Use for...of so we can await properly
         for (const key of uiKeys) {
             const val = await ls.get("ui_" + key);
             if (val !== null) {
-                this.state[key] = val; // ls.get() already parses JSON
+                this.state[key] = val;
             }
         }
 
-        // Safety: initialize missing objects/arrays
+        // Safety: initialize missing objects/arrays (still good)
         this.state.pendingOrders = this.state.pendingOrders || [];
         this.state.completedOrders = this.state.completedOrders || [];
         this.state.ledger = this.state.ledger || [];
