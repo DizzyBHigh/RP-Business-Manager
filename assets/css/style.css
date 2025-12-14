@@ -586,6 +586,14 @@ th {
     animation: pulse 2s infinite;
 }
 
+#onlineList {
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    max-width: none !important;
+    /* or a large value */
+}
+
 @keyframes pulse {
 
     0%,

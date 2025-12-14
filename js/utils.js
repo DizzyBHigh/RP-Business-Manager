@@ -211,45 +211,96 @@ async function ensureCompanyId() {
 function renderOnlineUsers() {
     const target = document.getElementById("onlineList");
     if (!target) {
-        // DOM not ready yet — try again in 100ms
+        console.warn("renderOnlineUsers: #onlineList element not found yet");
         setTimeout(renderOnlineUsers, 100);
         return;
     }
 
+    console.log("renderOnlineUsers: Attaching onSnapshot listener");
+
     ONLINE_DOC.collection("users").onSnapshot(snap => {
+        console.log(`onSnapshot fired — ${snap.size} documents received`);
+
         const onlineUsers = [];
+        let docCount = 0;
 
         snap.forEach(doc => {
+            docCount++;
             const d = doc.data();
-            if (!d?.name) return;
+            const id = doc.id;
 
-            const lastSeenMs = d.lastSeen?.toMillis?.() || (d.lastSeen?.seconds ? d.lastSeen.seconds * 1000 : 0);
-            if (Date.now() - lastSeenMs > 90000) return;
+            console.log(`Doc ${docCount}/${snap.size} - ID: ${id}`);
+            console.log("  Raw data:", d);
 
-            onlineUsers.push({
-                name: d.name,
-                role: d.role || "assistant"
-            });
+            if (!d) {
+                console.log("  → Skipped: no data");
+                return;
+            }
+
+            if (!d.name || typeof d.name !== "string" || d.name.trim() === "") {
+                console.log("  → Skipped: invalid or missing name");
+                return;
+            }
+
+            const name = d.name.trim();
+            const onlineFlag = d.online === true;
+            const role = d.role || "unknown";
+
+            let lastSeenMs = Date.now();
+            if (d.lastSeen) {
+                if (typeof d.lastSeen.toMillis === "function") {
+                    lastSeenMs = d.lastSeen.toMillis();
+                } else if (d.lastSeen.seconds) {
+                    lastSeenMs = d.lastSeen.seconds * 1000;
+                }
+            }
+            const ageMinutes = Math.round((Date.now() - lastSeenMs) / 60000);
+
+            console.log(`  → ${name} | online: ${onlineFlag} | role: ${role} | lastSeen: ${ageMinutes} min ago`);
+
+            // Primary: use online flag
+            if (!onlineFlag) {
+                console.log("  → Excluded: online flag is false");
+                return;
+            }
+
+            // Secondary: stale check
+            if (Date.now() - lastSeenMs > 300000) {
+                console.log("  → Excluded: stale (>90s no heartbeat)");
+                return;
+            }
+
+            onlineUsers.push(name);
+            console.log("  → INCLUDED in online list");
         });
 
-        onlineUsers.sort((a, b) => a.name.localeCompare(b.name));
+        console.log(`Final online users: ${onlineUsers.length} → [${onlineUsers.join(", ")}]`);
+
+        onlineUsers.sort((a, b) => a.localeCompare(b));
 
         if (onlineUsers.length === 0) {
             target.innerHTML = `<span style="color:#666; font-style:italic;">No one online</span>`;
+            console.log("Rendered: No one online");
             return;
         }
 
-        const rows = onlineUsers.map(u => `
-      <strong style="color:#0f8;">${u.name}</strong>
-    `).join(" • ");
+        const namesList = onlineUsers.map(name => `<strong style="color:#0f8;">${name}</strong>`).join(" • ");
 
         target.innerHTML = `
-      <span style="color:#0f8; font-weight:bold;">Online:</span>
-      <span style="background:#0f82; color:white; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:6px;">
-        ${onlineUsers.length}
-      </span>
-      ${rows}
-    `;
+            <span style="color:#0f8; font-weight:bold;">Online:</span>
+            <strong style="margin-left:6px;">${onlineUsers.length}</strong>
+            <span style="margin-left:8px;">${namesList}</span>
+        `;
+
+        if (onlineUsers.length > 5) {
+            target.title = "Online users:\n" + onlineUsers.map(n => `• ${n}`).join("\n");
+            target.style.cursor = "help";
+        }
+
+        console.log(`Rendered top bar: Online: ${onlineUsers.length} ${namesList.replace(/<[^>]*>/g, '')}`);
+    }, err => {
+        console.error("Online listener error:", err);
+        target.innerHTML = `<span style="color:#f66;">Error</span>`;
     });
 }
 
@@ -344,6 +395,33 @@ function deepMerge(target, source) {
     return target;
 }
 
+
+async function getOnlineCount() {
+    try {
+        const snap = await db.collection("business").doc("online").collection("users").get();
+        let count = 0;
+        snap.forEach(doc => {
+            const d = doc.data();
+            if (!d?.name) return;
+            if (d.online !== true) return;
+
+            let lastSeenMs = Date.now();
+            if (d.lastSeen) {
+                if (typeof d.lastSeen.toMillis === "function") {
+                    lastSeenMs = d.lastSeen.toMillis();
+                } else if (d.lastSeen.seconds) {
+                    lastSeenMs = d.lastSeen.seconds * 1000;
+                }
+            }
+            if (Date.now() - lastSeenMs > 300000) return; // 5 minutes
+            count++;
+        });
+        return count;
+    } catch (err) {
+        console.warn("Failed to get online count:", err);
+        return 0;
+    }
+}
 /* function updatePageTitleAndHeader() {
     if (App.state.businessConfig?.name) {
         document.title = `${App.state.businessConfig.name} - HSRP Manager`;
