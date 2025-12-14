@@ -513,6 +513,7 @@ const RecipeEditor = {
                                 style="padding:8px 16px; background:#0f8; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
                             Add to Order
                         </button>
+                        ${hasPermission("canEditRecipes") ? `
                         <button onclick="RecipeEditor.load('${item}')" 
                                 style="padding:8px 16px; background:#0af; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
                             Edit
@@ -521,6 +522,9 @@ const RecipeEditor = {
                                 style="padding:8px 16px; background:#fa5; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
                             Duplicate
                         </button>
+                        ` : `
+                        <span style="color:#888; font-style:italic; font-size:14px;">(Editing restricted)</span>
+                        `}
                     </div>
                 </td>
             `;

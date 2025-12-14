@@ -337,7 +337,9 @@ let permissionsConfig = {
         canEditRecipes: { manager: true, assistant: true, worker: false, viewer: false },
         canDeleteRecipes: { manager: true, assistant: false, worker: false, viewer: false },
         canEditRawPrices: { manager: true, assistant: true, worker: false, viewer: false },
-
+        canTransferStock: { manager: true, assistant: true, worker: false, viewer: false },
+        canEditwarehouseStock: { manager: true, assistant: true, worker: false, viewer: false },
+        canEditShopStock: { manager: true, assistant: true, worker: false, viewer: false },
         //canEditRecipeWeights: { manager: true, assistant: true, worker: false, viewer: false },
         //canPurchaseRawMaterials: { manager: true, assistant: true, worker: true, viewer: false },
         //canImportShopSales: { manager: true, assistant: true, worker: false, viewer: false },
@@ -608,6 +610,8 @@ async function applyPermissions(data) {
         }
     });
 
+
+
     // Watermark for restricted users
     if (["viewer", "worker"].includes(myRole)) {
         if (!document.getElementById("roleWatermark")) {
@@ -619,6 +623,10 @@ async function applyPermissions(data) {
         }
     } else {
         document.getElementById("roleWatermark")?.remove();
+    }
+
+    if (typeof Inventory !== "undefined" && Inventory.render) {
+        Inventory.render();
     }
 }
 
