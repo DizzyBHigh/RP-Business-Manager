@@ -44,7 +44,7 @@ async function initRoles() {
         renderPermissionsEditor();
         RolesManager?.render?.();
         goOnline();
-        renderOnlineUsers()
+
 
     } catch (err) {
         console.error("initRoles failed:", err);
@@ -87,7 +87,7 @@ const AuthManager = {
         if (window.BusinessManager?.render) window.BusinessManager.render();
 
         // NOW 100% safe to go online
-        goOnline();   // ← ONLY runs after name + passphrase + role are confirmed
+        goOnline();
         updateWelcomeScreen();
         setInterval(updateWelcomeScreen, 3000);
         // Auto-redirect viewers to welcome tab
@@ -293,9 +293,35 @@ function goOnline() {
 
     myOnlineRef = db.collection("business").doc("online").collection("users").doc(window.playerName);
 
-    const heartbeat = () => {
+    const heartbeat = async () => {
         if (!window.playerName || !myOnlineRef) return;
 
+        try {
+            // Check if user is already an approved employee
+            const mainDoc = await db.collection("business").doc("main").get();
+            const employees = mainDoc.data()?.employees || {};
+
+            if (!employees[window.playerName]) {
+                // Not an employee → ensure they are in pendingUsers
+                const pendingRef = db.collection("business").doc("pendingUsers");
+                const pendingSnap = await pendingRef.get();
+                const pendingData = pendingSnap.exists ? pendingSnap.data() || {} : {};
+
+                if (!pendingData[window.playerName]) {
+                    await pendingRef.set({
+                        [window.playerName]: {
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                            requestedBy: window.playerName
+                        }
+                    }, { merge: true });
+                    console.log(`${window.playerName} added to pending users (new online user)`);
+                }
+            }
+        } catch (err) {
+            console.warn("Failed to check/add to pending users:", err);
+        }
+
+        // Send heartbeat
         myOnlineRef.set({
             name: window.playerName,
             role: window.myRole || "viewer",
@@ -304,9 +330,13 @@ function goOnline() {
         }, { merge: true }).catch(err => console.warn("Heartbeat failed", err));
     };
 
+    // Initial heartbeat
     heartbeat();
+
+    // Repeat every 10 seconds
     const interval = setInterval(heartbeat, 10000);
 
+    // Cleanup on unload
     const goOffline = () => {
         clearInterval(interval);
         if (myOnlineRef) {
@@ -980,6 +1010,8 @@ const App = {
                 if (el) el.dispatchEvent(new Event("input"));
             });
             EmployeeSelect.refreshAll();
+            renderOnlineUsers();
+            setInterval(renderOnlineUsers, 30000); // Refresh every 30 seconds
 
         });
 
@@ -1125,12 +1157,17 @@ const BusinessManager = {
                 this.displayBusinessInfo(config);
                 this.showManagementSection();
             } else {
-                // FIRST-TIME SETUP — SHOW MODAL, NOT INLINE FORM
+                // FIRST-TIME SETUP — SHOW MODAL
                 showBusinessSetupModal();
             }
+
+            // NEW: Always render pending users when business tab loads, even during setup
+            PendingUsersManager.render();
+
         } catch (error) {
             console.error('Error loading business config:', error);
-            showBusinessSetupModal(); // fallback to modal
+            showBusinessSetupModal();
+            PendingUsersManager.render(); // Still try to show pending users
         }
     },
 
@@ -1145,6 +1182,8 @@ const BusinessManager = {
         if (form) form.style.display = 'none';
         if (passphraseSection) passphraseSection.style.display = 'block';
         if (pendingSection) pendingSection.style.display = 'block';
+        PendingUsersManager.render();
+
 
         const nameEl = document.getElementById('displayBusinessName');
         const taglineEl = document.getElementById('displayBusinessTagline');
@@ -1199,6 +1238,7 @@ const BusinessManager = {
     showManagementSection() {
         document.getElementById('passphraseManagement')?.style.setProperty('display', 'block');
         document.getElementById('pendingUsersSection')?.style.setProperty('display', 'block');
+        PendingUsersManager.render();
     },
 
     async save() {
@@ -1374,25 +1414,27 @@ const PendingUsersManager = {
     },
 
     async approveUser(userName) {
-        const ok = await showConfirm(`Approve ${userName} as an employee?`); if (!ok) return;
+        const ok = await showConfirm(`Approve ${userName} as an employee?`);
+        if (!ok) return;
 
         try {
-            // Create an update that properly merges the new employee without overwriting existing ones
+            // Add to employees in main doc
             const employeeUpdate = {};
             employeeUpdate[`employees.${userName}`] = {
                 hiredAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            const pendingUpdates = {};
-            pendingUpdates[userName] = firebase.firestore.FieldValue.delete();
+            // Delete from pendingUsers doc
+            const pendingUpdate = {};
+            pendingUpdate[userName] = firebase.firestore.FieldValue.delete();
 
             await Promise.all([
                 firebase.firestore().collection('business').doc('main').update(employeeUpdate),
-                this.pendingUsersRef.update(pendingUpdates)
+                firebase.firestore().collection('business').doc('pendingUsers').update(pendingUpdate)
             ]);
 
             showToast("success", `${userName} has been approved and added as an employee.`);
-            this.render();
+            this.render(); // Refresh list
         } catch (error) {
             console.error('Error approving user:', error);
             showToast("fail", 'Error approving user: ' + error.message);
@@ -1400,18 +1442,15 @@ const PendingUsersManager = {
     },
 
     async rejectUser(userName) {
-        if (await showConfirm(`Reject ${userName}'s access request? They will be permanently removed from the pending list.`)) {
-            return;
-        }
+        const ok = await showConfirm(`Reject ${userName}'s access request? They will be permanently removed from the pending list.`);
+        if (!ok) return;
 
         try {
-            const updates = {};
-            updates[userName] = {
-                status: 'rejected',
-                rejectedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
+            const update = {};
+            update[userName] = firebase.firestore.FieldValue.delete();
 
-            await this.pendingUsersRef.update(updates);
+            await firebase.firestore().collection('business').doc('pendingUsers').update(update);
+
             showToast("success", `${userName} has been rejected.`);
             this.render();
         } catch (error) {
@@ -2009,6 +2048,12 @@ async function activateTab(tabId) {
         Crops.populateDropdowns();  // Populate selects
         Crops.setupIngredientSearch();
     }
+
+    if (tabId === "business") {
+        BusinessManager.render();
+        PendingUsersManager.render(); // Ensure pending users load
+    }
+
     // Save last tab/section
     try {
         await ls.set("lastTab", tabId);
