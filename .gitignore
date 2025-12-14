@@ -1,1 +1,4 @@
 reources.code-workspace
+/js/firebaseConfig-base.js
+/js/firebaseConfig-demo.js
+/js/firebaseConfig-RGS.js
