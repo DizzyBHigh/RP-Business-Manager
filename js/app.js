@@ -384,13 +384,17 @@ async function savePermissionsConfig() {
     if (myRole !== "manager") return showToast("fail", "Only managers can save permissions!");
 
     try {
+        // Force save the FULL permissionsConfig, including actions
         await ROLES_DOC.set({ permissions: permissionsConfig }, { merge: true });
-        showToast("success", "Permissions saved successfully!");
-        console.log("Permissions saved:", permissionsConfig);
+        showToast("success", "Permissions saved successfully — including action permissions!");
+        console.log("Full permissions saved:", permissionsConfig);
     } catch (err) {
         console.error("Save failed:", err);
         showToast("fail", "Failed to save permissions");
     }
+
+    // Force re-render to confirm
+    renderPermissionsEditor();
 }
 
 // Update single checkbox
@@ -442,6 +446,7 @@ function renderPermissionsEditor() {
                 <h3>Permissions Editor</h3>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">`;
 
+    // Tab permissions columns
     ["viewer", "worker", "assistant"].forEach(role => {
         html += `<div class="role-card" style="background:#1a1a2e;padding:15px;border-radius:8px;">
                     <h4 style="margin:0 0 10px;color:#0ff;">${role.toUpperCase()}</h4>`;
@@ -479,6 +484,7 @@ function renderPermissionsEditor() {
         html += `</div>`;
     });
 
+    // Action Permissions section
     html += `<div class="role-card" style="background:#1a1a2e;padding:20px;border-radius:8px;grid-column:1/-1;margin-top:30px;">
                 <h4 style="margin:0 0 20px;color:#ff0;text-align:center;font-size:20px;">Action Permissions</h4>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;">`;
