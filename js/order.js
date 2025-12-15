@@ -1253,11 +1253,41 @@ document.getElementById("toggleProfit").addEventListener("click", () => {
 });
 
 function updateProfitView() {
-    const hide = !showProfit;
-    document.querySelectorAll(".profit-only").forEach(el => el.style.display = hide ? "none" : "");
-    document.getElementById("profitLine").style.display = hide ? "none" : "";
-    document.getElementById("toggleProfit").textContent = showProfit ? "Hide Profit (Customer View)" : "Show Profit (Internal View)";
-    document.getElementById("toggleProfit").className = showProfit ? "profit-toggle primary" : "profit-toggle success";
+    const toggleBtn = document.getElementById('toggleProfit');
+    if (!toggleBtn) return;
+
+    const showProfit = toggleBtn.textContent.includes('Hide');
+
+    // Update button text
+    toggleBtn.textContent = showProfit
+        ? 'Show Profit (Staff View)'
+        : 'Hide Profit (Customer View)';
+
+    // Toggle unit cost column in invoice table
+    document.querySelectorAll('.profit-only').forEach(el => {
+        el.style.display = showProfit ? '' : 'none';
+    });
+
+    // Toggle staff-only cost/subtotal section
+    const staffCostSummary = document.getElementById('staffCostSummary');
+    if (staffCostSummary) {
+        staffCostSummary.style.display = showProfit ? 'flex' : 'none';
+    }
+
+    // Toggle profit row
+    const profitRow = document.getElementById('orderProfitRow');
+    if (profitRow) {
+        profitRow.style.display = showProfit ? 'block' : 'none';
+    }
+
+    // Update profit color (always green in your old style)
+    const profitAmountEl = document.getElementById('orderProfitAmount');
+    if (profitAmountEl) {
+        profitAmountEl.style.color = '#0f8';
+        // Color the "PROFIT:" label
+        const labelSpan = profitAmountEl.closest('span');
+        if (labelSpan) labelSpan.style.color = '#0f8';
+    }
 }
 
 document.getElementById("filterFrom")?.addEventListener("change", () => Order.render());
