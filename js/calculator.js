@@ -84,13 +84,13 @@ const Calculator = {
         // === CROP DETECTION ===
         const isCrop = App.state.seeds && Object.values(App.state.seeds).some(s => s.finalProduct === item);
         const cropKey = `crop→${key}`;
-        const cropChoice = Calculator.liveToggle[cropKey] ?? (canUseStock ? "warehouse" : "grow");
+        const cropChoice = Calculator.liveToggle[cropKey] ?? (canUseStock ? "warehouse" : "grow");  // default unchanged
 
         let itemWeight = this.weight(item);
         if (isCrop) {
             const seedData = Object.values(App.state.seeds || {}).find(s => s.finalProduct === item);
             if (seedData?.finalWeight) {
-                itemWeight = seedData.finalWeight; // e.g. 1.0kg per Corn
+                itemWeight = seedData.finalWeight;
             }
         }
         const totalWeight = (qty * itemWeight).toFixed(3);
@@ -102,13 +102,14 @@ const Calculator = {
             html += `<button onclick="removeOrderItemDirectly(${orderIndex})" style="background:#c00;color:white;border:none;padding:2px 8px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;" title="Remove from order">×</button>`;
         }
 
-        // === CROP: Grow vs Warehouse Dropdown ===
+        // === CROP: Dropdown with new "Warehouse (raw)" option ===
         if (isCrop) {
             html += `
                 <select style="font-size:12px;padding:2px;border-radius:4px;background:#000;color:white;border:1px solid #444;"
                         onchange="Calculator.liveToggle['${cropKey}']=this.value; debouncedCalcRun();">
-                    <option value="warehouse" ${cropChoice === "warehouse" ? "selected" : ""}>Use Warehouse (${stock})</option>
                     <option value="grow" ${cropChoice === "grow" ? "selected" : ""}>Grow (Harvest)</option>
+                    <option value="warehouse" ${cropChoice === "warehouse" ? "selected" : ""}>Use Warehouse (avg) (${stock})</option>
+                    <option value="warehouse-raw" ${cropChoice === "warehouse-raw" ? "selected" : ""}>Warehouse (raw) (${stock})</option>
                 </select>`;
         }
         // Normal crafting dropdown
@@ -128,8 +129,11 @@ const Calculator = {
         if (isCrop) {
             if (cropChoice === "grow") {
                 topLevelCost = Crops.calculateHarvestCostFromEstimate(item, qty);
-            } else {
+            } else if (cropChoice === "warehouse") {
                 topLevelCost = Crops.getAverageCostPerUnit(item) * qty;
+            } else if (cropChoice === "warehouse-raw") {
+                const rawPrice = (typeof App.state.rawPrice[item] === 'object' ? App.state.rawPrice[item].price : App.state.rawPrice[item]) || 0;
+                topLevelCost = Number(rawPrice) * qty;
             }
         } else if (userChoice !== "warehouse") {
             topLevelCost = this.cost(item) * qty;
@@ -189,11 +193,12 @@ const Calculator = {
             return html;
         }
 
-        // === WAREHOUSE STOCK MESSAGE ===
-        if ((isCrop && cropChoice === "warehouse") || (!isCrop && userChoice === "warehouse")) {
+        // === WAREHOUSE STOCK MESSAGE (covers both warehouse options) ===
+        if ((isCrop && (cropChoice === "warehouse" || cropChoice === "warehouse-raw")) || (!isCrop && userChoice === "warehouse")) {
             if (canUseStock) {
+                const pricingNote = cropChoice === "warehouse-raw" ? " (raw pricing)" : cropChoice === "warehouse" ? " (avg pricing)" : "";
                 return html + `<div style="margin-left:${(depth + 1) * 24}px;color:#0f8;font-style:italic;padding:6px 0;">
-                    Using ${needed} × ${item} from warehouse (${totalWeight}kg)
+                    Using ${needed} × ${item} from warehouse${pricingNote} (${totalWeight}kg)
                 </div>`;
             }
         }
@@ -216,7 +221,8 @@ const Calculator = {
         this.weights = {};
         Calculator.liveToggle = Calculator.liveToggle || {};
 
-        let totalRaw = {}, grandCost = 0, grandSell = 0;
+        let totalRaw = {};
+        let grandCost = 0, grandSell = 0;
         let finalProductWeight = 0;
         let treeHTML = "", invoiceHTML = "";
 
@@ -229,23 +235,85 @@ const Calculator = {
                 safeSetText(id, "$0.00")
             );
             safeSetText("profitPercent", "0%");
+            updateIfChanged("invoiceSummaryContainer", ""); // Clear invoice summary
             return;
         }
 
-        // ──────── EXPAND TO RAW (respects liveToggle) ────────
+        // ──────── EXPAND TO RAW (respects liveToggle + records effective unit cost) ────────
         const expandToRaw = (item, qty, path = []) => {
             const key = path.concat(item).join("→");
             const choice = Calculator.liveToggle[key] ?? "craft";
+            const cropKey = `crop→${key}`;
+            const cropChoice = Calculator.liveToggle[cropKey];
             const recipe = App.state.recipes[item];
             const stock = App.state.warehouseStock[item] || 0;
+            const needed = qty;
+            const isCrop = App.state.seeds && Object.values(App.state.seeds).some(s => s.finalProduct === item);
 
-            if (choice === "warehouse" && stock >= qty) {
-                totalRaw[item] = (totalRaw[item] || 0) + qty;
+            // Handle crops
+            if (isCrop) {
+                const cropChoice = Calculator.liveToggle[cropKey] || (stock >= needed ? "warehouse" : "grow");
+
+                // CASE 1: Grow (Harvest) → expand to seeds + ingredients ONLY
+                if (cropChoice === "grow") {
+                    const estimate = Crops.getHarvestEstimate(item, needed);
+
+                    // Add seeds
+                    if (estimate.seedsNeeded) {
+                        for (const [s, q] of Object.entries(estimate.seedsNeeded)) {
+                            const entry = totalRaw[s] || { qty: 0 };
+                            entry.qty += q;
+                            entry.unitCost = this.cost(s);  // usually raw price
+                            totalRaw[s] = entry;
+                        }
+                    }
+
+                    // Add ingredients
+                    if (estimate.ingredientsNeeded) {
+                        for (const [i, q] of Object.entries(estimate.ingredientsNeeded)) {
+                            const entry = totalRaw[i] || { qty: 0 };
+                            entry.qty += q;
+                            entry.unitCost = this.cost(i);
+                            totalRaw[i] = entry;
+                        }
+                    }
+
+                    // DO NOT add the crop itself to totalRaw
+                    return;
+                }
+
+                // CASE 2 & 3: Warehouse (avg) or Warehouse (raw) → add crop itself with correct unit cost
+                const entry = totalRaw[item] || { qty: 0 };
+                entry.qty += needed;
+
+                if (cropChoice === "warehouse-raw") {
+                    const rawPrice = (typeof App.state.rawPrice[item] === 'object' ? App.state.rawPrice[item].price : App.state.rawPrice[item]) || 0;
+                    entry.unitCost = Number(rawPrice);
+                } else {
+                    // warehouse (average)
+                    entry.unitCost = Crops.getAverageCostPerUnit(item) || 0;
+                }
+
+                totalRaw[item] = entry;
+                return;  // Do not expand further
+            }
+
+            // Handle non-crop warehouse use
+            if (!isCrop && choice === "warehouse" && stock >= needed) {
+                const entry = totalRaw[item] || { qty: 0 };
+                entry.qty += needed;
+                // For non-crops pulled from warehouse, use crafted cost (or 0 if raw)
+                entry.unitCost = this.cost(item);
+                totalRaw[item] = entry;
                 return;
             }
 
-            if (!recipe?.i) {
-                totalRaw[item] = (totalRaw[item] || 0) + qty;
+            // Default: break down to ingredients
+            if (!recipe?.i || Object.keys(recipe.i).length === 0) {
+                const entry = totalRaw[item] || { qty: 0 };
+                entry.qty += needed;
+                entry.unitCost = this.cost(item);  // raw or fallback
+                totalRaw[item] = entry;
                 return;
             }
 
@@ -276,78 +344,52 @@ const Calculator = {
                 this.cost(o.item) * (o.tier === "bulk" ? 1.10 : 1.25));
             grandSell += sellPrice * o.qty;
 
-            // === CORRECT WEIGHT & UNIT COST FOR INVOICE ===
-            let invoiceWeight = 0;
+            // === UNIT COST FOR INVOICE (updated for new option) ===
+            let invoiceWeight = (o.qty * finalItemWeight).toFixed(3);
             let unitCost = 0;
 
             const isCropProduct = App.state.seeds && Object.values(App.state.seeds).some(s => s.finalProduct === o.item);
 
             if (isCropProduct) {
-                const seedData = Object.values(App.state.seeds).find(s => s.finalProduct === o.item);
-                invoiceWeight = (o.qty * (seedData?.finalWeight || 0)).toFixed(3);
-
                 const cropKey = `crop→${o.item}`;
-                const isGrowing = Calculator.liveToggle[cropKey] === "grow";
+                const cropChoice = Calculator.liveToggle[cropKey] ?? (App.state.warehouseStock[o.item] >= o.qty ? "warehouse" : "grow");
 
-                unitCost = isGrowing
-                    ? Crops.calculateHarvestCostFromEstimate(o.item, 1)
-                    : Crops.getAverageCostPerUnit(o.item);
+                if (cropChoice === "grow") {
+                    unitCost = Crops.calculateHarvestCostFromEstimate(o.item, 1);
+                } else if (cropChoice === "warehouse-raw") {
+                    const rawPrice = (typeof App.state.rawPrice[o.item] === 'object' ? App.state.rawPrice[o.item].price : App.state.rawPrice[o.item]) || 0;
+                    unitCost = Number(rawPrice);
+                } else {
+                    // warehouse (average)
+                    unitCost = Crops.getAverageCostPerUnit(o.item) || 0;
+                }
             } else {
-                invoiceWeight = (o.qty * this.weight(o.item)).toFixed(3);
                 unitCost = this.cost(o.item);
             }
 
             invoiceHTML += `<tr>
                 <td>${o.qty}</td>
-                <td><strong>${o.item}</strong></td>
+                <td>${o.item}</td>
                 <td>${o.tier === "bulk" ? "Bulk" : "Shop"}</td>
-                <td style="color:#0af;font-weight:bold;">${invoiceWeight}kg</td>
+                <td>${invoiceWeight}kg</td>
                 <td class="profit-only">$${unitCost.toFixed(4)}</td>
                 <td>$${sellPrice.toFixed(2)}</td>
                 <td>$${(sellPrice * o.qty).toFixed(2)}</td>
             </tr>`;
         });
 
-        // ──────── COMPUTE GRAND COST USING SAME LOGIC AS RAW TABLE ────────
+        // ──────── COMPUTE GRAND COST (updated for new option) ────────
         grandCost = 0;
-        for (const [item, needed] of Object.entries(totalRaw)) {
-            const isCrop = App.state.seeds && Object.values(App.state.seeds).some(s => s.finalProduct === item);
-            const cropKey = `crop→${item}`;
-            const isGrowing = isCrop && Calculator.liveToggle[cropKey] === "grow";
-
-            let itemCost = 0;
-            if (isCrop) {
-                if (isGrowing) {
-                    const estimate = Crops.getHarvestEstimate(item, needed);
-
-                    // Seeds
-                    if (estimate.seedsNeeded) {
-                        for (const [seedName, seedQty] of Object.entries(estimate.seedsNeeded)) {
-                            totalRaw[seedName] = (totalRaw[seedName] || 0) + seedQty;
-                        }
-                    }
-
-                    // Ingredients
-                    if (estimate.ingredientsNeeded) {
-                        for (const [ingName, ingQty] of Object.entries(estimate.ingredientsNeeded)) {
-                            totalRaw[ingName] = (totalRaw[ingName] || 0) + ingQty;
-                        }
-                    }
-
-                    itemCost = Crops.calculateHarvestCostFromEstimate(item, needed);
-                } else {
-                    itemCost = Crops.getAverageCostPerUnit(item) * needed;
-                }
-            } else {
-                itemCost = this.cost(item) * needed;
-            }
-            grandCost += itemCost;
+        for (const [item, data] of Object.entries(totalRaw)) {
+            const qty = data.qty;
+            const unitCost = data.unitCost !== undefined ? data.unitCost : this.cost(item);
+            grandCost += unitCost * qty;
         }
 
         const rawTableHTML = this.generateRawTableHTML(totalRaw, finalProductWeight, grandSell);
 
         // === DISCOUNT LOGIC ===
-        const discountAmount = parseFloat(App.state.orderDiscount?.amount || 0) || 0;
+        const discountAmount = parseFloat(App.state.orderDiscount?.amount || "0") || 0;
         const discountReason = App.state.orderDiscount?.reason?.trim() || "Discount";
 
         const profitBeforeDiscount = grandSell - grandCost;
@@ -355,181 +397,145 @@ const Calculator = {
         const profit = profitBeforeDiscount - discountAmount;
         const profitPct = grandCost > 0 ? ((profit + discountAmount) / grandCost * 100).toFixed(1) : 0;
 
-        console.log("DISCOUNT CALCULATION:", { grandSell, grandCost, discountAmount, finalTotal, profit });
+        // === INVOICE SUMMARY HTML (CUSTOMER: SUBTOTAL → DISCOUNT → TOTAL DUE) ===
+        let invoiceSummaryHTML = `
+            <div style="margin-top:40px; text-align:center;">
+                <!-- CUSTOMER VIEW: Subtotal / Discount / Total Due -->
+                <div id="customerSummary">
+                    <div style="font-size:28px; font-weight:bold; color:#0f8; margin-bottom:15px;">
+                        Subtotal: $<span id="orderSubtotal">${grandSell.toFixed(2)}</span>
+                    </div>
+    
+                    ${discountAmount > 0 ? `
+                        <div style="color:#f66; font-weight:bold; font-size:20px; margin:15px 0;">
+                            Discount (${discountReason}): -$${discountAmount.toFixed(2)}
+                        </div>
+                    ` : ''}
+    
+                    <div style="font-size:36px; font-weight:bold; color:#0ff; margin:20px 0;">
+                        TOTAL DUE: $<span id="orderGrandTotal">${finalTotal.toFixed(2)}</span>
+                    </div>
+                </div>
+    
+                <!-- STAFF-ONLY: Cost to Produce (replaces Subtotal in staff view) -->
+                <div id="staffCostLine" style="display:none; font-size:28px; font-weight:bold; color:#0cf; margin-bottom:15px;">
+                    Cost to Produce: $<span id="orderTotalCost">${grandCost.toFixed(2)}</span>
+                </div>
+    
+                <!-- PROFIT LINE - HIDDEN IN CUSTOMER VIEW -->
+                <div id="orderProfitRow" style="margin:30px 0; font-size:20px; display:none;">
+                    <span style="color:#0f8; font-weight:bold;">
+                        PROFIT: +$<span id="orderProfitAmount">${profit.toFixed(2)}</span> (${profitPct}%)
+                    </span>
+                </div>
+    
+                <!-- TOTAL WEIGHT - ALWAYS VISIBLE -->
+                <div style="color:#0af; font-size:18px; margin-top:30px;">
+                    Total Weight: <strong>${finalProductWeight.toFixed(1)}kg</strong>
+                </div>
+    
+                <div style="color:#0af; font-size:16px; margin-top:10px;">
+                    Thank you for your business! All items handcrafted with love.
+                </div>
+            </div>
+        `;
 
-        const summaryData = {
-            grandCost: grandCost,
-            grandSell: grandSell,
-            discount: discountAmount,
-            discountReason: discountReason,
-            finalTotal: finalTotal,
-            profit: profit,
-            profitPct: profitPct,
-            finalProductWeight: finalProductWeight
-        };
+        // === ORDER PAGE SUMMARY (MAIN ORDER TAB - ALWAYS SHOWS FULL DETAILS) ===
+        let orderPageSummaryHTML = "";
 
-        console.log("summaryData sent to renderOrderSummary:", summaryData);
+        if (App.state.order.length > 0) {
+            orderPageSummaryHTML = `
+            <div style="background:#001122; padding:20px; border-radius:12px; border:2px solid #0af; text-align:center; margin:20px 0;">
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:30px; margin-bottom:20px; font-size:18px;">
+                    <div>
+                        <div style="color:#aaa; margin-bottom:8px;">Cost to Produce</div>
+                        <div style="font-size:28px; font-weight:bold; color:#0cf;">
+                            $<span id="mainTotalCost">${grandCost.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="color:#aaa; margin-bottom:8px;">Subtotal</div>
+                        <div style="font-size:28px; font-weight:bold; color:#0f8;">
+                            $<span id="mainSubtotal">${grandSell.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="color:#aaa; margin-bottom:8px;">TOTAL</div>
+                        <div style="font-size:36px; font-weight:bold; color:#0ff;">
+                            $<span id="mainGrandTotal">${finalTotal.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
 
-        // Render summaries AFTER all calculations
-        Calculator.renderOrderSummary(summaryData, "invoiceSummaryContainer");
-        Calculator.renderOrderSummary(summaryData, "orderSummaryContainer");
+                ${discountAmount > 0 ? `
+                    <div style="color:#f66; font-weight:bold; font-size:18px; margin:15px 0;">
+                        Discount (${discountReason}): -$${discountAmount.toFixed(2)}
+                    </div>
+                ` : ''}
 
-        // Update the big total number at the top
-        safeSetText("grandTotal", `$${finalTotal.toFixed(2)}`);
+                <div style="margin:20px 0; font-size:20px;">
+                    <span style="color:#0f8; font-weight:bold;">
+                        PROFIT: +$<span id="mainProfitAmount">${profit.toFixed(2)}</span> (${profitPct}%)
+                    </span>
+                    <span style="margin-left:60px; color:#0af;">
+                        Total Weight: ${finalProductWeight.toFixed(1)}kg
+                    </span>
+                </div>
+            </div>
+        `;
+        } else {
+            orderPageSummaryHTML = "";
+        }
 
-        // ──────── UPDATE DOM ONLY WHEN NEEDED ────────
+        // Update the main order page summary
+        updateIfChanged("orderPageSummary", orderPageSummaryHTML);
+
+        // Update UI
         updateIfChanged("craftingTree", treeHTML);
         updateIfChanged("rawSummary", rawTableHTML);
         updateIfChanged("invoiceItems", invoiceHTML);
+        updateIfChanged("invoiceSummaryContainer", invoiceSummaryHTML); // NEW: Populate invoice summary
+
+        // Update Calculator tab summary (old IDs)
+        safeSetText("subtotal", "$" + grandSell.toFixed(2));
+        safeSetText("totalCost", "$" + grandCost.toFixed(2));
+        safeSetText("grandTotal", "$" + finalTotal.toFixed(2));
+        safeSetText("profitAmount", profit >= 0 ? "$" + profit.toFixed(2) : "−$" + Math.abs(profit).toFixed(2));
+        safeSetText("profitPercent", profitPct + "%");
+
+        const profitEl = document.getElementById("profitAmount");
+        if (profitEl) {
+            profitEl.style.color = profit >= 0 ? "var(--profit-green)" : "var(--loss-red)";
+        }
     },
 
+    generateRawTableHTML(totalRaw, finalProductWeight, grandSell) {
+        let html = `<table style="width:100%;border-collapse:collapse;"><thead><tr>
+            <th>Item</th><th>Needed</th><th>Cost/Unit</th><th>Total Cost</th>
+        </tr></thead><tbody>`;
+        let tableTotalCost = 0;
 
-    renderOrderSummary(data, targetId) {
-        const { grandCost = 0, grandSell = 0, discount = 0, discountReason = "", finalTotal = 0, profit = 0, profitPct = 0, finalProductWeight = 0 } = data;
-        const profitClass = profit >= 0 ? "profit-positive" : "profit-negative";
-        const profitSign = profit >= 0 ? "+" : "";
+        for (const [item, data] of Object.entries(totalRaw)) {
+            const qty = data.qty;
+            // Use recorded unitCost if available, otherwise fall back to this.cost(item)
+            const unitCost = data.unitCost !== undefined ? data.unitCost : this.cost(item);
+            const cost = unitCost * qty;
+            tableTotalCost += cost;
 
-        const html = `
-        <div class="invoice-total" style="margin-top:20px; padding:18px 0; border-top:2px solid #0af; border-bottom:2px solid #0af; background:rgba(0,170,255,0.05); font-size:18px; line-height:1.8;">
-            
-            <div style="display:flex; justify-content:flex-end; align-items:flex-end; flex-wrap:wrap; gap:20px; font-weight:bold;">
-
-                <!-- Left side: Cost & Profit (only visible internally) -->
-                <div class="profit-only" style="margin-right:auto; text-align:left; color:#aaa;">
-                    <div><strong>Cost to Produce:</strong> <span id="costToProduce"> $${grandCost.toFixed(2)}</span></div>
-                    <div id="profitLine" style="color:#0f8; font-size:19px;">
-                        PROFIT: 
-                        <span id="profitAmount" class="${profitClass}">
-                            ${profitSign}$${Math.abs(profit).toFixed(2)}
-                        </span>
-                        <span id="profitPercent" style="color:#0af;">($${profitPct}%)</span>
-                    </div>
-                </div>
-
-                <!-- Right side: TOTAL DUE + Weight (always visible) -->
-                <div style="text-align:right; min-width:220px;">
-                    <div style="font-size:28px; color:#0ff;">
-                        TOTAL DUE:
-                        <span id="grandTotal" class="grand-total">$${finalTotal.toFixed(2)}</span>
-                    </div>
-
-                    ${discount > 0 ? `
-                    <div style="font-size:18px; color:#ff6b6b; margin-top:8px;">
-                        Discount (${discountReason}): -$${discount.toFixed(2)}
-                    </div>` : ''}
-                    <div style="color:#0af; font-size:16px; margin-top:4px;">
-                        Total Weight: 
-                        <span id="invoiceTotalWeight">${finalProductWeight.toFixed(1)}</span>kg
-                    </div>
-                    <div style="color:#0af; font-size:16px; margin-top:4px;">
-                        Thank you for your business! All items handcrafted with love.
-                    </div>
-                </div>
-            </div>
-
-            
-        </div>
-    `;
-
-        const container = document.getElementById(targetId);
-        if (!container) return console.warn(`renderOrderSummary: No element with ID "${targetId}" found`);
-        if (container.innerHTML !== html) container.innerHTML = html;
-    },
-
-    generateRawTableHTML(totalRaw, finalWeight, grandSell) {
-        if (Object.keys(totalRaw).length === 0) {
-            return "<p style='text-align:center;color:#888;padding:40px'>No materials needed</p>";
+            html += `<tr>
+                <td>${item}</td>
+                <td>${qty}</td>
+                <td>$${unitCost.toFixed(4)}</td>
+                <td>$${cost.toFixed(2)}</td>
+            </tr>`;
         }
 
-        let rows = `<table style="width:100%;border-collapse:collapse;margin-top:20px;font-size:14px;">
-                    <tr style="background:#003366;color:white;">
-                        <th>Raw Material</th><th>Needed</th><th>In Stock</th><th>Weight</th><th>Status</th><th style="text-align:right">Cost</th>
-                    </tr>`;
+        html += `<tr style="font-weight:bold;background:#111;">
+            <td colspan="往下3">Total Raw Cost</td>
+            <td>$${tableTotalCost.toFixed(2)}</td>
+        </tr></tbody></table>`;
 
-        let materialsCost = 0;
-        let totalWeightUsed = 0;
-
-        const sorted = Object.keys(totalRaw).sort((a, b) => a.localeCompare(b));
-
-        for (const item of sorted) {
-            const needed = totalRaw[item];
-            const stock = App.state.warehouseStock[item] || 0;
-
-            let cost = 0;
-            let label = item;
-
-            const isCrop = App.state.seeds && Object.values(App.state.seeds).some(s => s.finalProduct === item);
-            const cropKey = `crop→${item}`;
-            const isGrowing = isCrop && Calculator.liveToggle[cropKey] === "grow";
-
-            // === DETERMINE COST ===
-            if (isCrop) {
-                if (isGrowing) {
-                    cost = Crops.calculateHarvestCostFromEstimate(item, needed);
-                    label = `${item} (harvest)`;
-                } else {
-                    cost = Crops.getAverageCostPerUnit(item) * needed;
-                    label = `${item} (avg harvest cost)`;
-                }
-            } else {
-                // Normal raw/crafted item
-                cost = Calculator.cost(item) * needed;
-            }
-
-            // === CORRECT WEIGHT LOGIC ===
-            let itemWeight = 0;
-
-            // 1. Final crop product? Use finalWeight from seed data
-            if (isCrop) {
-                const seedData = Object.values(App.state.seeds || {}).find(s => s.finalProduct === item);
-                if (seedData?.finalWeight) {
-                    itemWeight = seedData.finalWeight; // e.g. 1.0kg per Corn
-                }
-            }
-
-            // 2. Fallback: normal weight from recipe/raw
-            if (itemWeight === 0) {
-                itemWeight = Calculator.weight(item);
-            }
-
-            const lineWeight = needed * itemWeight;
-            totalWeightUsed += lineWeight;
-
-            materialsCost += cost;
-
-            const fromWH = !isGrowing && Object.entries(Calculator.liveToggle).some(
-                ([k, v]) => v === "warehouse" && k.includes(item)
-            );
-
-            rows += `<tr ${fromWH ? 'style="background:rgba(0,255,150,0.1)"' : ''}>
-                        <td style="padding:8px"><strong>${label}</strong></td>
-                        <td style="padding:8px">${needed}</td>
-                        <td style="padding:8px">${stock}</td>
-                        <td style="padding:8px;color:#0af;font-weight:bold">${lineWeight.toFixed(3)}kg</td>
-                        <td style="padding:8px;color:${stock >= needed ? "#0f8" : "#f44"};font-weight:bold">
-                            ${stock >= needed ? "OK" : "LOW"}
-                        </td>
-                        <td style="padding:8px;text-align:right;font-weight:bold;">
-                            $${cost.toFixed(2)}
-                        </td>
-                    </tr>`;
-        }
-
-        const profit = grandSell - materialsCost;
-
-        rows += `<tr style="background:#001122;color:#0ff;font-weight:bold;font-size:16px">
-                    <td colspan="3" style="padding:14px">
-                        Materials Cost: $${materialsCost.toFixed(2)}<br>
-                        Profit: <span style="color:${profit >= 0 ? '#0f8' : '#f44'}">$${profit.toFixed(2)}</span>
-                    </td>
-                    <td style="padding:14px;color:#0af">${totalWeightUsed.toFixed(1)}kg<br><small>All Materials</small></td>
-                    <td colspan="2" style="padding:14px;text-align:right">
-                        Final Shippable Weight:<br>
-                        <strong style="font-size:20px;color:#0ff">${finalWeight.toFixed(1)}kg</strong>
-                    </td>
-                </tr></table>`;
-
-        return rows;
+        return html;
     }
 };
 
