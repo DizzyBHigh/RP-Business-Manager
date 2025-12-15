@@ -216,10 +216,10 @@ function renderOnlineUsers() {
         return;
     }
 
-    console.log("renderOnlineUsers: Attaching onSnapshot listener");
+    //console.log("renderOnlineUsers: Attaching onSnapshot listener");
 
     ONLINE_DOC.collection("users").onSnapshot(snap => {
-        console.log(`onSnapshot fired — ${snap.size} documents received`);
+        //console.log(`onSnapshot fired — ${snap.size} documents received`);
 
         const onlineUsers = [];
         let docCount = 0;
@@ -229,16 +229,16 @@ function renderOnlineUsers() {
             const d = doc.data();
             const id = doc.id;
 
-            console.log(`Doc ${docCount}/${snap.size} - ID: ${id}`);
-            console.log("  Raw data:", d);
+            //console.log(`Doc ${docCount}/${snap.size} - ID: ${id}`);
+            //console.log("  Raw data:", d);
 
             if (!d) {
-                console.log("  → Skipped: no data");
+                //console.log("  → Skipped: no data");
                 return;
             }
 
             if (!d.name || typeof d.name !== "string" || d.name.trim() === "") {
-                console.log("  → Skipped: invalid or missing name");
+                //console.log("  → Skipped: invalid or missing name");
                 return;
             }
 
@@ -256,31 +256,31 @@ function renderOnlineUsers() {
             }
             const ageMinutes = Math.round((Date.now() - lastSeenMs) / 60000);
 
-            console.log(`  → ${name} | online: ${onlineFlag} | role: ${role} | lastSeen: ${ageMinutes} min ago`);
+            //console.log(`  → ${name} | online: ${onlineFlag} | role: ${role} | lastSeen: ${ageMinutes} min ago`);
 
             // Primary: use online flag
             if (!onlineFlag) {
-                console.log("  → Excluded: online flag is false");
+                //console.log("  → Excluded: online flag is false");
                 return;
             }
 
             // Secondary: stale check
             if (Date.now() - lastSeenMs > 300000) {
-                console.log("  → Excluded: stale (>90s no heartbeat)");
+                //console.log("  → Excluded: stale (>90s no heartbeat)");
                 return;
             }
 
             onlineUsers.push(name);
-            console.log("  → INCLUDED in online list");
+            //console.log("  → INCLUDED in online list");
         });
 
-        console.log(`Final online users: ${onlineUsers.length} → [${onlineUsers.join(", ")}]`);
+        //console.log(`Final online users: ${onlineUsers.length} → [${onlineUsers.join(", ")}]`);
 
         onlineUsers.sort((a, b) => a.localeCompare(b));
 
         if (onlineUsers.length === 0) {
             target.innerHTML = `<span style="color:#666; font-style:italic;">No one online</span>`;
-            console.log("Rendered: No one online");
+            //console.log("Rendered: No one online");
             return;
         }
 
@@ -297,7 +297,7 @@ function renderOnlineUsers() {
             target.style.cursor = "help";
         }
 
-        console.log(`Rendered top bar: Online: ${onlineUsers.length} ${namesList.replace(/<[^>]*>/g, '')}`);
+        //console.log(`Rendered top bar: Online: ${onlineUsers.length} ${namesList.replace(/<[^>]*>/g, '')}`);
     }, err => {
         console.error("Online listener error:", err);
         target.innerHTML = `<span style="color:#f66;">Error</span>`;
