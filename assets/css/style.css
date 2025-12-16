@@ -1015,6 +1015,16 @@ button.loading {
     cursor: wait !important;
 }
 
+.logoutBtn {
+    z-index: 1000;
+    background: #0e95d4;
+    color: white;
+    border: none;
+    padding: 2px 5px 3px 5px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
 /* Success Message Styling */
 .success-notification {
     position: fixed !important;

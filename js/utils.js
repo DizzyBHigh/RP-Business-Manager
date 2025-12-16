@@ -216,77 +216,100 @@ function renderOnlineUsers() {
         return;
     }
 
-    //console.log("renderOnlineUsers: Attaching onSnapshot listener");
+    // === ATTACH LOGOUT LISTENER ONCE USING DELEGATION ===
+    // Remove any previous delegation to be safe
+    target.removeEventListener("click", handleLogoutClick);
+    target.addEventListener("click", handleLogoutClick);
 
+    function handleLogoutClick(e) {
+        if (e.target.id === "logoutBtn" || e.target.closest("#logoutBtn")) {
+            e.preventDefault();
+            e.stopPropagation();
+            logoutUser();
+        }
+    }
+
+    // === LOGOUT FUNCTION (defined once) ===
+    async function logoutUser() {
+        try {
+            // Always try to mark offline — if ref doesn't exist, it just skips
+            const onlineRef = App.state?.onlineStatusRef || window.onlineRef;
+            if (onlineRef) {
+                await onlineRef.set({
+                    online: false,
+                    lastSeen: new Date().toISOString()
+                });
+            }
+
+            // Always clear all possible login traces (safe even if not set)
+            if (App.state) {
+                delete App.state.loggedInUser;
+                App.state.currentEmployee = "";
+            }
+            delete window.playerName;
+
+            localStorage.removeItem('playerName');
+            localStorage.removeItem('loggedInUser');
+
+            if (window.ls?.remove) {
+                await Promise.all([
+                    window.ls.remove("loggedInUser").catch(() => { }),
+                    window.ls.remove("playerName").catch(() => { })
+                ]);
+            }
+
+            // UI cleanup
+            const empSelect = document.getElementById("employeeSelect");
+            if (empSelect) empSelect.value = "";
+
+            showToast("success", "Logged out successfully");
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
+
+        } catch (err) {
+            console.error("Logout error:", err);
+            showToast("fail", "Logout failed");
+        }
+    }
+
+    // === ON SNAPSHOT: ONLY UPDATE HTML ===
     ONLINE_DOC.collection("users").onSnapshot(snap => {
-        //console.log(`onSnapshot fired — ${snap.size} documents received`);
-
         const onlineUsers = [];
-        let docCount = 0;
 
         snap.forEach(doc => {
-            docCount++;
             const d = doc.data();
-            const id = doc.id;
-
-            //console.log(`Doc ${docCount}/${snap.size} - ID: ${id}`);
-            //console.log("  Raw data:", d);
-
-            if (!d) {
-                //console.log("  → Skipped: no data");
-                return;
-            }
-
-            if (!d.name || typeof d.name !== "string" || d.name.trim() === "") {
-                //console.log("  → Skipped: invalid or missing name");
-                return;
-            }
+            if (!d || !d.name || typeof d.name !== "string" || d.name.trim() === "") return;
 
             const name = d.name.trim();
             const onlineFlag = d.online === true;
-            const role = d.role || "unknown";
 
             let lastSeenMs = Date.now();
             if (d.lastSeen) {
                 if (typeof d.lastSeen.toMillis === "function") {
                     lastSeenMs = d.lastSeen.toMillis();
-                } else if (d.lastSeen.seconds) {
+                } else if (d.lastSeen?.seconds) {
                     lastSeenMs = d.lastSeen.seconds * 1000;
                 }
             }
-            const ageMinutes = Math.round((Date.now() - lastSeenMs) / 60000);
 
-            //console.log(`  → ${name} | online: ${onlineFlag} | role: ${role} | lastSeen: ${ageMinutes} min ago`);
-
-            // Primary: use online flag
-            if (!onlineFlag) {
-                //console.log("  → Excluded: online flag is false");
-                return;
-            }
-
-            // Secondary: stale check
-            if (Date.now() - lastSeenMs > 300000) {
-                //console.log("  → Excluded: stale (>90s no heartbeat)");
-                return;
-            }
+            if (!onlineFlag || Date.now() - lastSeenMs > 300000) return;
 
             onlineUsers.push(name);
-            //console.log("  → INCLUDED in online list");
         });
-
-        //console.log(`Final online users: ${onlineUsers.length} → [${onlineUsers.join(", ")}]`);
 
         onlineUsers.sort((a, b) => a.localeCompare(b));
 
         if (onlineUsers.length === 0) {
             target.innerHTML = `<span style="color:#666; font-style:italic;">No one online</span>`;
-            //console.log("Rendered: No one online");
             return;
         }
 
         const namesList = onlineUsers.map(name => `<strong style="color:#0f8;">${name}</strong>`).join(" • ");
 
         target.innerHTML = `
+            <button id="logoutBtn" class="logoutBtn" title="Logout">↩ Logout</button>
             <span style="color:#0f8; font-weight:bold;">Online:</span>
             <strong style="margin-left:6px;">${onlineUsers.length}</strong>
             <span style="margin-left:8px;">${namesList}</span>
@@ -296,8 +319,6 @@ function renderOnlineUsers() {
             target.title = "Online users:\n" + onlineUsers.map(n => `• ${n}`).join("\n");
             target.style.cursor = "help";
         }
-
-        //console.log(`Rendered top bar: Online: ${onlineUsers.length} ${namesList.replace(/<[^>]*>/g, '')}`);
     }, err => {
         console.error("Online listener error:", err);
         target.innerHTML = `<span style="color:#f66;">Error</span>`;
@@ -310,6 +331,8 @@ if (document.readyState === "loading") {
 } else {
     renderOnlineUsers();
 }
+
+
 
 function resolveWarehouseItemToDisplay(itemName, qtyUsedFromWarehouse) {
     // These are the only crafted items that can come from warehouse and replace raw costs
@@ -329,6 +352,8 @@ function resolveWarehouseItemToDisplay(itemName, qtyUsedFromWarehouse) {
         replaces: mapping.replaces
     };
 }
+
+
 
 // ──────────────────────────────────────────────────────────────
 // Remove an item directly from the crafting tree
@@ -422,6 +447,70 @@ async function getOnlineCount() {
         return 0;
     }
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+    async function logoutUser() {
+        const userName = App.state?.loggedInUser || window.playerName || localStorage.getItem('playerName');
+
+        if (!userName) {
+            console.log("No user logged in");
+            return;
+        }
+
+        try {
+            // 1. Mark user as offline in Firebase
+            const onlineRef = App.state?.onlineStatusRef || window.onlineRef;
+            if (onlineRef) {
+                await onlineRef.set({
+                    online: false,
+                    lastSeen: new Date().toISOString()
+                });
+                console.log(`User ${userName} marked offline`);
+            }
+
+            // 2. Clear local login state
+            if (App.state) {
+                delete App.state.loggedInUser;
+                App.state.currentEmployee = "";
+            }
+            delete window.playerName;
+            localStorage.removeItem('playerName');
+            localStorage.removeItem('loggedInUser');
+
+            if (window.ls && typeof window.ls.remove === 'function') {
+                await window.ls.remove("loggedInUser").catch(() => { });
+            }
+
+            // Update UI
+            const employeeSelect = document.getElementById("employeeSelect");
+            if (employeeSelect) employeeSelect.value = "";
+
+            // Show toast (safe fallback)
+            if (typeof showToast === 'function') {
+                showToast("success", `Logged out successfully`);
+            } else {
+                alert("Logged out successfully");
+            }
+
+            // Reload page
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
+
+        } catch (err) {
+            console.error("Logout failed:", err);
+            if (typeof showToast === 'function') {
+                showToast("fail", "Logout failed — check console");
+            }
+        }
+    }
+
+    // Only attach listener if button exists
+    const logoutBtn = document.getElementById("logoutBtn");
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", logoutUser);
+    }
+});
 /* function updatePageTitleAndHeader() {
     if (App.state.businessConfig?.name) {
         document.title = `${App.state.businessConfig.name} - HSRP Manager`;
