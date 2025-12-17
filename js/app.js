@@ -1085,15 +1085,26 @@ const App = {
             }
         }
 
-        // Safety: initialize missing objects/arrays (still good)
-        this.state.pendingOrders = this.state.pendingOrders || [];
-        this.state.completedOrders = this.state.completedOrders || [];
-        this.state.ledger = this.state.ledger || [];
-        this.state.warehouseStock = this.state.warehouseStock || {};
-        this.state.shopStock = this.state.shopStock || {};
-        this.state.employees = this.state.employees || {};
-        this.state.minStock = this.state.minStock || {};
+        // Safety: initialize missing objects/arrays ONLY if not already set
+        this.state.pendingOrders ??= [];
+        this.state.completedOrders ??= [];
+        this.state.ledger ??= [];
+        //this.state.warehouseStock ??= {};   // ← Safe nullish coalescing
+        //this.state.shopStock ??= {};
+        this.state.employees ??= {};
+        //this.state.minStock ??= {};
 
+        // Only initialize if undefined/null (not if empty object from Firebase)
+        if (this.state.warehouseStock === undefined || this.state.warehouseStock === null) {
+            this.state.warehouseStock = {};
+        }
+        if (this.state.shopStock === undefined || this.state.shopStock === null) {
+            this.state.shopStock = {};
+        }
+        if (this.state.minStock === undefined || this.state.minStock === null) {
+            this.state.minStock = {};
+        }
+        console.log("Warehouse stock after load:", this.state.warehouseStock);
         this.trigger("ready");
     },
 

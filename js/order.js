@@ -19,11 +19,6 @@ window.addEventListener("load", async () => {
             Order.renderCurrentOrder();
         }
     }, 800);
-    setTimeout(() => {
-        console.log("Ensuring warehouseStock is reactive...");
-        // Force Firebase to re-attach listeners
-        App.save("warehouseStock").catch(() => { });
-    }, 2000);
 });
 const Order = {
     mode: "customer", // "customer" | "shop" | "warehouse"

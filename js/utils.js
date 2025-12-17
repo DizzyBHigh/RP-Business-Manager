@@ -511,6 +511,73 @@ document.addEventListener("DOMContentLoaded", () => {
         logoutBtn.addEventListener("click", logoutUser);
     }
 });
+
+async function autoBackupToFile() {
+    let businessName = "My-Business";  // Fallback
+
+    try {
+        // Fetch from the correct path: business-config-companyId
+        const configDoc = firebase.firestore()
+            .collection("businesses")
+            .doc(App.companyId || App.state.companyId)  // Use your companyId variable
+            .collection("config")
+            .doc("companyId");
+
+        const snap = await configDoc.get();
+        if (snap.exists) {
+            const data = snap.data();
+            if (data?.name && typeof data.name === "string") {
+                businessName = data.name.trim();
+            }
+        }
+    } catch (err) {
+        console.warn("Failed to fetch business name for backup filename:", err);
+        // Fall back to App.state if available
+        businessName = App.state.businessName || App.state.name || businessName;
+    }
+
+    // Clean the name for safe filename
+    businessName = businessName
+        .replace(/[^a-zA-Z0-9\-_ ]/g, "")  // Remove invalid chars
+        .replace(/\s+/g, "-")              // Spaces → dashes
+        .substring(0, 50)                  // Limit length
+        || "Business";                     // Final fallback
+
+    const backupData = {
+        timestamp: new Date().toISOString(),
+        businessName: businessName,
+        warehouseStock: App.state.warehouseStock || {},
+        shopStock: App.state.shopStock || {},
+        ledger: App.state.ledger || [],
+        completedOrders: App.state.completedOrders || [],
+        rawPrice: App.state.rawPrice || {},
+        recipes: App.state.recipes || {},
+        employees: App.state.employees || {},
+        minStock: App.state.minStock || {},
+        // Add any other data you want backed up
+    };
+
+    const dataStr = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    const dateStr = new Date().toISOString().slice(0, 10);
+    link.download = `${businessName}-backup-${dateStr}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    console.log(`Auto-backup downloaded: ${link.download}`);
+    showToast("success", `Backup saved: ${link.download}`);
+}
+
+if (isManager()) {  // Your manager check
+    setInterval(autoBackupToFile, 180 * 60 * 1000);
+}
+
 /* function updatePageTitleAndHeader() {
     if (App.state.businessConfig?.name) {
         document.title = `${App.state.businessConfig.name} - HSRP Manager`;
