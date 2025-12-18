@@ -12,40 +12,58 @@ const EmployeeManager = {
             return;
         }
 
-        list.innerHTML = employees.map(([name, rate]) => `
-                    <div class="item-row" style="align-items:center;justify-content:space-between;padding:12px;">
-                        <div>
+        list.innerHTML = employees.map(([name, data]) => {
+            // Force rate to number — handle corrupted data
+            let rate = 0;
+            if (typeof data === 'number') {
+                rate = data;
+            } else if (typeof data === 'object' && data !== null) {
+                rate = Number(data.rate || data.value || data.commissionRate || 0) || 0;
+            }
+
+            rate = Math.max(0, Math.min(100, rate));  // Clamp 0-100
+
+            return `
+                <div class="item-row" style="align-items:center;justify-content:space-between;padding:12px;">
+                    <div>
                         <strong style="font-size:16px;">${name}</strong>
                         <span style="margin-left:20px;color:var(--accent);">Current Rate: ${rate}% commission</span>
-                        </div>
-                        <div style="display:flex;gap:8px;align-items:center;">
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;">
                         <input type="number" id="rate_${name.replace(/ /g, '_')}" value="${rate}" min="0" max="100" style="width:80px;padding:8px;">
                         <span>%</span>
                         <button class="primary small" onclick="EmployeeManager.update('${name}')">Update Rate</button>
                         <button class="danger small" onclick="EmployeeManager.remove('${name}')">Delete</button>
-                        </div>
                     </div>
-                `).join("");
+                </div>
+            `;
+        }).join("");
     },
     add() {
         const name = document.getElementById("newEmployeeName").value.trim();
-        const rate = parseFloat(document.getElementById("newEmployeePct").value);
-        if (!name) return showToast("fail", "Enter employee name");
-        if (isNaN(rate) || rate < 0 || rate > 100) return showToast("fail", "Rate must be 0-100%");
+        const rateInput = document.getElementById("newEmployeePct");
+        const rate = Number(rateInput.value) || 0;
 
-        App.state.employees[name] = rate;
+        if (!name) return showToast("fail", "Enter employee name");
+        if (rate < 0 || rate > 100) return showToast("fail", "Rate must be 0-100%");
+
+        App.state.employees[name] = rate;  // Always store as number
         App.save("employees");
+        rateInput.value = "15";  // Reset
         document.getElementById("newEmployeeName").value = "";
         this.render();
-        Order.render(); // update dropdown
+        Order.render();
         EmployeeSelect.refreshAll();
     },
+
     update(name) {
         const inputId = "rate_" + name.replace(/ /g, '_');
-        const newRate = parseFloat(document.getElementById(inputId).value);
-        if (isNaN(newRate) || newRate < 0 || newRate > 100) return showToast("fail", "Invalid rate (0-100%)");
+        const input = document.getElementById(inputId);
+        const newRate = Number(input.value) || 0;
 
-        App.state.employees[name] = newRate;
+        if (newRate < 0 || newRate > 100) return showToast("fail", "Invalid rate (0-100%)");
+
+        App.state.employees[name] = newRate;  // Force number
         App.save("employees");
         showToast("success", `${name}'s commission updated to ${newRate}%`);
         this.render();

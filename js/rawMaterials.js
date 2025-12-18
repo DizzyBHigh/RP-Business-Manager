@@ -553,44 +553,43 @@ document.getElementById("newRawName")?.addEventListener("input", function (e) {
 
 // AUTO-SAVE PRICE & WEIGHT ON BLUR
 // AUTO-SAVE PRICE & WEIGHT ON BLUR — GREEN FLASH ON INPUT ONLY
-document.getElementById("rawTable")?.addEventListener("focusout", function (e) {
+document.addEventListener("focusout", function (e) {
     const input = e.target;
-    if (!input.classList.contains("auto-save-input") || input.disabled) return; // NEW: Skip if disabled
+    if (!input || !input.classList.contains("auto-save-input") || input.disabled) return;
+
     const item = input.dataset.item;
     if (!item) return;
 
     let value = parseFloat(input.value) || 0;
 
-    // Update the correct field
+    // Ensure object exists
+    if (!App.state.rawPrice[item]) App.state.rawPrice[item] = {};
+
     if (input.classList.contains("priceInput")) {
-        if (!App.state.rawPrice[item]) App.state.rawPrice[item] = {};
         App.state.rawPrice[item].price = value;
-    }
-    else if (input.classList.contains("weightInput")) {
-        if (!App.state.rawPrice[item]) App.state.rawPrice[item] = {};
+    } else if (input.classList.contains("weightInput")) {
         App.state.rawPrice[item].weight = value;
 
-        // Only update row highlight (no flash on row)
+        // Update row highlight
         const row = input.closest("tr");
-        if (value > 0) {
-            row.style.background = "rgba(0, 170, 255, 0.08)";
-            row.style.borderLeft = "4px solid #0af";
-        } else {
-            row.style.background = "";
-            row.style.borderLeft = "none";
+        if (row) {
+            if (value > 0) {
+                row.style.background = "rgba(0, 170, 255, 0.08)";
+                row.style.borderLeft = "4px solid #0af";
+            } else {
+                row.style.background = "";
+                row.style.borderLeft = "none";
+            }
         }
     }
 
-    // Save to Firebase
     App.save("rawPrice");
     debouncedCalcRun();
 
-    // GREEN FLASH ONLY ON THE INPUT FIELD
+    // Green flash
     input.style.background = "#004400";
     input.style.transition = "background 0.4s ease";
-    setTimeout(() => {
-        input.style.background = ""; // back to normal
-    }, 400);
+    setTimeout(() => input.style.background = "", 400);
 });
 document.addEventListener("DOMContentLoaded", () => {
 

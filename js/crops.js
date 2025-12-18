@@ -93,16 +93,17 @@ const Crops = {
         const weight = parseFloat(document.getElementById('seedWeight').value) || 0;
         const finalWeight = parseFloat(document.getElementById('finalWeight').value) || 0;
 
-        // === CHECK IF WE'RE EDITING (seedName already exists) ===
-        const isEditing = App.state.seeds?.[seedName] !== undefined;
-        const oldData = isEditing ? App.state.seeds[seedName] : null;
+        if (weight <= 0 || finalWeight <= 0) {
+            return showToast("fail", "Seed weight and final weight must be greater than 0");
+        }
 
-        // === DUPLICATE CHECKS (skip current seed when editing) ===
+        const isEditing = App.state.seeds?.[seedName] !== undefined;
+
+        // Duplicate checks
         if (!isEditing && App.state.seeds?.[seedName]) {
             return showToast("fail", `Seed "${seedName}" already exists!`);
         }
 
-        // Check if product name is used by another seed
         const productConflict = Object.entries(App.state.seeds || {}).some(([name, data]) => {
             return name !== seedName && data.finalProduct === productName;
         });
@@ -112,19 +113,28 @@ const Crops = {
 
         // === SAVE SEED ===
         App.state.seeds[seedName] = {
-            price,
-            weight,
+            price: Number(price),
+            weight: Number(weight),
             finalProduct: productName,
-            finalWeight
+            finalWeight: Number(finalWeight)
         };
 
-        // === UPDATE rawPrice SAFELY ===
+        // === UPDATE rawPrice — CORRECT OBJECT FORMAT ===
         if (!App.state.rawPrice) App.state.rawPrice = {};
-        App.state.rawPrice[seedName] = price;
-        App.state.rawPrice[productName] = 0;
+
+        // Seed: full object with price + weight
+        App.state.rawPrice[seedName] = {
+            price: Number(price),
+            weight: Number(weight)
+        };
+
+        // Final product (raw crop): price 0, weight from harvest
+        App.state.rawPrice[productName] = {
+            price: 0,
+            weight: Number(finalWeight)
+        };
 
         // Initialize stock
-        //if (!App.state.warehouseStock) App.state.warehouseStock = {};
         App.state.warehouseStock[seedName] = App.state.warehouseStock[seedName] || 0;
         App.state.warehouseStock[productName] = App.state.warehouseStock[productName] || 0;
 
@@ -139,11 +149,12 @@ const Crops = {
             document.getElementById('seedForm')?.reset();
             Crops.renderSeeds();
             Inventory.render?.();
+            debouncedCalcRun?.();
 
             const action = isEditing ? "updated" : "added";
             showToast("success",
                 `Seed <strong>${seedName}</strong> ${action}!<br>
-             Produces: <strong>${productName}</strong>`
+                 Produces: <strong>${productName}</strong> (${finalWeight}kg/unit)`
             );
         } catch (err) {
             console.error("Save failed:", err);
