@@ -389,13 +389,19 @@ const Calculator = {
         const rawTableHTML = this.generateRawTableHTML(totalRaw, finalProductWeight, grandSell);
 
         // === DISCOUNT LOGIC ===
-        const discountAmount = parseFloat(App.state.orderDiscount?.amount || "0") || 0;
-        const discountReason = App.state.orderDiscount?.reason?.trim() || "Discount";
+        // === DISCOUNT LOGIC (LIVE FROM YOUR INPUT FIELDS) ===
+        const discountInput = document.getElementById("discountAmount");
+        const reasonInput = document.getElementById("discountReason");
+        const discountAmount = discountInput ? (parseFloat(discountInput.value) || 0) : 0;
+        const discountReason = reasonInput ? (reasonInput.value.trim() || "Discount") : "Discount";
+
+        // Prevent discount larger than subtotal
+        const safeDiscount = discountAmount > grandSell ? grandSell : discountAmount;
 
         const profitBeforeDiscount = grandSell - grandCost;
-        const finalTotal = grandSell - discountAmount;
-        const profit = profitBeforeDiscount - discountAmount;
-        const profitPct = grandCost > 0 ? ((profit + discountAmount) / grandCost * 100).toFixed(1) : 0;
+        const finalTotal = grandSell - safeDiscount;
+        const profit = profitBeforeDiscount - safeDiscount;
+        const profitPct = grandSell > 0 ? ((profitBeforeDiscount / grandSell) * 100).toFixed(1) : 0;
 
         // === INVOICE SUMMARY HTML (CUSTOMER: SUBTOTAL → DISCOUNT → TOTAL DUE) ===
         let invoiceSummaryHTML = `
@@ -467,12 +473,12 @@ const Calculator = {
                     </div>
                 </div>
 
-                ${discountAmount > 0 ? `
-                    <div style="color:#f66; font-weight:bold; font-size:18px; margin:15px 0;">
-                        Discount (${discountReason}): -$${discountAmount.toFixed(2)}
+                ${safeDiscount > 0 ? `
+                    <div style="color:#fa5; font-weight:bold; font-size:22px; margin:15px 0; padding:10px; background:#220011; border-radius:8px; border:1px solid #fa5;">
+                        Discount (${discountReason}): −$${safeDiscount.toFixed(2)}
                     </div>
                 ` : ''}
-
+    
                 <div style="margin:20px 0; font-size:20px;">
                     <span style="color:#0f8; font-weight:bold;">
                         PROFIT: +$<span id="mainProfitAmount">${profit.toFixed(2)}</span> (${profitPct}%)

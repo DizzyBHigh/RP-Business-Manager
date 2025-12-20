@@ -222,6 +222,7 @@ const Order = {
         debouncedCalcRun();
         updateProfitDisplay();
         Inventory.render();
+        document.getElementById("orderPageSummary").innerHTML = "";
 
         showToast("success", Order.mode === "shop" || Order.mode === "warehouse" ? "Restock order cleared" : "Order cleared permanently");
     },
@@ -261,27 +262,51 @@ const Order = {
                 customerName = "INTERNAL";
             }
 
-            // ──────── 3. CALCULATE TOTALS ────────
-            let totalSale = 0, profit = 0, totalWeight = 0;
-            if (isCustomerSale) {
-                totalSale = parseFloat(document.getElementById("grandTotal")?.textContent.replace(/[$,]/g, "") || "0");
-                profit = parseFloat(document.getElementById("profitAmount")?.textContent.replace(/[$,]/g, "") || "0");
-            }
-            // === CORRECT TOTAL WEIGHT USING FINAL PRODUCT WEIGHT FROM SEEDS ===
-            App.state.order.forEach(o => {
-                let itemWeight = Calculator.weight(o.item);
+            // ──────── 3. CALCULATE TOTALS PROGRAMMATICALLY (NO DOM READING) ────────
+            // ──────── 3. CALCULATE TOTALS PROGRAMMATICALLY + APPLY DISCOUNT ────────
+            let subtotal = 0;        // Before discount
+            let totalCost = 0;
+            let totalWeight = 0;
+            let discountApplied = 0;
+            let discountReason = "";
 
-                // If it's a crop final product (Corn, Wheat, etc.), use the finalWeight from seed data
+            App.state.order.forEach(o => {
+                const cost = Calculator.cost(o.item);
+                const basePrice = App.state.customPrices?.[o.item]?.[o.tier] || cost * (o.tier === "bulk" ? 1.10 : 1.25);
+                const sellPrice = o.customPrice !== undefined ? o.customPrice : basePrice;
+
+                totalCost += cost * o.qty;
+                subtotal += sellPrice * o.qty;
+
+                // Weight (with crop finalWeight override)
+                let itemWeight = Calculator.weight(o.item);
                 if (App.state.seeds) {
                     const seedData = Object.values(App.state.seeds).find(s => s.finalProduct === o.item);
                     if (seedData?.finalWeight) {
                         itemWeight = seedData.finalWeight;
                     }
                 }
-
                 totalWeight += o.qty * itemWeight;
             });
-            totalWeight = Number(totalWeight.toFixed(3)); // keep 3 decimals for accuracy
+
+            totalWeight = Number(totalWeight.toFixed(3));
+
+            // === APPLY DISCOUNT (only for customer sales) ===
+            if (isCustomerSale) {
+                const discountInput = document.getElementById("discountAmount");
+                const reasonInput = document.getElementById("discountReason");
+
+                discountApplied = parseFloat(discountInput?.value || "0") || 0;
+                discountReason = reasonInput?.value?.trim() || "";
+
+                // Don't allow discount larger than subtotal
+                if (discountApplied > subtotal) {
+                    discountApplied = subtotal;
+                }
+            }
+
+            const totalSale = Math.max(0, subtotal - discountApplied);
+            const profit = totalSale - totalCost;  // Profit after discount
 
             // ──────── 4. GENERATE RECORD ────────
             const now = new Date();
@@ -297,11 +322,14 @@ const Order = {
                 customer: customerName,
                 items: App.state.order.map(o => ({ ...o })),
                 itemSummary: App.state.order.map(o => `${o.qty}×${o.item}`).join(", "),
-                totalSale: isCustomerSale ? totalSale : 0,
-                profit: isCustomerSale ? profit : 0,
+                subtotal: isCustomerSale ? Number(subtotal.toFixed(2)) : 0,           // New
+                discountApplied: isCustomerSale ? Number(discountApplied.toFixed(2)) : 0, // New
+                discountReason: isCustomerSale ? discountReason : "",                 // New
+                totalSale: isCustomerSale ? Number(totalSale.toFixed(2)) : 0,
+                profit: isCustomerSale ? Number(profit.toFixed(2)) : 0,
                 totalWeight: totalWeight,
                 commissionRate: commissionRate,
-                commissionAmount: isCustomerSale ? (profit * (commissionRate / 100)) : 0,
+                commissionAmount: isCustomerSale ? Number((profit * (commissionRate / 100)).toFixed(2)) : 0,
                 commissionPaid: false
             };
 
@@ -417,11 +445,12 @@ const Order = {
 
             Order.renderCurrentOrder();
             debouncedCalcRun();
+
             updateProfitDisplay();
             Inventory.render();
             Ledger.render();
             Order.renderPending();
-
+            document.getElementById("orderPageSummary").innerHTML = "";
         } catch (err) {
             overlay.style.display = "none";
             console.error("Order failed:", err);
@@ -484,7 +513,15 @@ const Order = {
                         <td>${o.customer || "—"}</td>
                         <td>${o.itemSummary}</td>
                         <td style="color:#0af;font-weight:bold;">${weightText}</td>
-                        <td style="font-weight:bold;">$${o.totalSale?.toFixed(2) || "0.00"}</td>
+                        <td style="font-weight:bold;">
+                            $${o.totalSale.toFixed(2)}
+                            ${o.discountApplied > 0
+                    ? `<br><small style="color:#fa5;font-weight:normal;">
+                                    (Includes -$${o.discountApplied.toFixed(2)} discount ${o.discountReason ? `: ${o.discountReason}` : ""})
+                                </small>`
+                    : ""
+                }
+                        </td>
                         <td style="color:#0f8; font-weight:bold;">$${gross.toFixed(2)}</td>
                         <td style="color:#0cf;">${rate}% → $${comm.toFixed(2)}</td>
                         <td style="color:#0f8;font-weight:bold;">$${net.toFixed(2)}</td>
@@ -1181,7 +1218,7 @@ const Order = {
 function updateProfitDisplay() {
     const items = App.state.order || [];
     let totalCost = 0;
-    let totalSale = 0;
+    let subtotal = 0;  // Sale amount BEFORE discount
 
     if (items.length > 0) {
         items.forEach(function (o) {
@@ -1191,14 +1228,27 @@ function updateProfitDisplay() {
                 cost * (o.tier === "bulk" ? 1.10 : 1.25);
 
             totalCost += cost * o.qty;
-            totalSale += price * o.qty;
+            subtotal += price * o.qty;
         });
     }
 
-    const profit = totalSale - totalCost;
-    const profitPercent = totalSale > 0 ? (profit / totalSale) * 100 : 0;
+    const profit = subtotal - totalCost;
+    const profitPercent = subtotal > 0 ? (profit / subtotal) * 100 : 0;
 
-    // SAFE DOM UPDATES — NO OPTIONAL CHAINING, NO SYNTAX ERRORS
+    // === APPLY DISCOUNT FOR DISPLAY ONLY ===
+    let discountApplied = 0;
+    const discountInput = document.getElementById("discountAmount");
+    if (discountInput && discountInput.value) {
+        discountApplied = parseFloat(discountInput.value) || 0;
+        // Don't allow discount larger than subtotal
+        if (discountApplied > subtotal) {
+            discountApplied = subtotal;
+        }
+    }
+
+    const finalTotal = Math.max(0, subtotal - discountApplied);
+
+    // === UPDATE DOM ELEMENTS ===
     const costEl = document.getElementById("costToProduce");
     if (costEl) costEl.textContent = "$" + totalCost.toFixed(2);
 
@@ -1213,7 +1263,28 @@ function updateProfitDisplay() {
     if (percentEl) percentEl.textContent = profitPercent.toFixed(1) + "%";
 
     const totalEl = document.getElementById("grandTotal");
-    if (totalEl) totalEl.textContent = "$" + totalSale.toFixed(2);
+    if (totalEl) {
+        totalEl.textContent = "$" + finalTotal.toFixed(2);
+        // Change color when discount is applied
+        if (discountApplied > 0) {
+            totalEl.style.color = "#fa5";  // Orange/yellow to highlight discount
+            totalEl.style.fontWeight = "bold";
+        } else {
+            totalEl.style.color = "#0f8";  // Normal green
+            totalEl.style.fontWeight = "bold";
+        }
+    }
+
+    // Optional: Show discount amount live somewhere (e.g. next to grand total)
+    const discountDisplay = document.getElementById("liveDiscountDisplay");
+    if (discountDisplay) {
+        if (discountApplied > 0) {
+            discountDisplay.textContent = `−$${discountApplied.toFixed(2)}`;
+            discountDisplay.style.display = "inline";
+        } else {
+            discountDisplay.style.display = "none";
+        }
+    }
 }
 
 // Populate employee dropdown + restore saved values

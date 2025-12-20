@@ -162,10 +162,42 @@ const Ledger = {
             let desc = e.description || e.type || "—";
             let customerInfo = "";
 
+            let amountCell = "";
+            if (e.type === "sale" && e.subtotal > e.totalSale) {
+                // Show original → final with discount highlight
+                amountCell = `
+                    <div style="text-align:right;">
+                        <div style="color:#888; text-decoration:line-through; ">
+                            $${e.subtotal.toFixed(2)}
+                        </div>
+                        <div style="font-weight:bold; color:#0ff; ">
+                            $${e.totalSale.toFixed(2)}
+                        </div>
+                    </div>
+                `;
+            } else {
+                amountCell = `
+                    <span style="font-weight:bold;color:${amount > 0 ? 'var(--green)' : 'var(--red)'}">
+                        ${amount > 0 ? "+" : ""}$${Math.abs(amount).toFixed(2)}
+                    </span>
+                `;
+            }
             if (e.type === "sale") {
                 amount = e.totalSale || 0;
                 customerInfo = e.customer && e.customer !== "Walk-in" ? ` → ${e.customer}` : "";
-                desc = `Customer Sale${customerInfo}`;
+
+                let saleDesc = "Customer Sale" + customerInfo;
+
+                // Add discount info if there was one
+                if (e.discountApplied > 0) {
+                    const discountText = e.discountReason
+                        ? ` (Discount: $${e.discountApplied.toFixed(2)} - ${e.discountReason})`
+                        : ` (Discount: $${e.discountApplied.toFixed(2)})`;
+                    saleDesc += `<br><small style="color:#fa5; font-weight:bold;">${discountText}</small>`;
+                }
+
+                desc = saleDesc;
+
             } else if (e.type === "restock_shop" || e.type === "restock_warehouse") {
                 amount = 0;
                 desc = `Restock (${e.type === "restock_shop" ? "Shop" : "Warehouse"})`;
@@ -213,8 +245,8 @@ const Ledger = {
                     </small>
                     ${weightText}
                 </td>
-                <td style="text-align:right;font-weight:bold;color:${amount > 0 ? 'var(--green)' : 'var(--red)'}">
-                    ${amount > 0 ? "+" : ""}$${Math.abs(amount).toFixed(2)}
+                <td style="text-align:right;">
+                    ${amountCell}
                 </td>
                 <td style="text-align:right;font-weight:bold;color:${balanceAtTime[e.id] >= 0 ? 'var(--green)' : 'var(--red)'};font-size:18px;">
                     $${balanceAtTime[e.id].toFixed(2)}
