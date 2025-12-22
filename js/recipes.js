@@ -24,61 +24,69 @@ const RecipeEditor = {
         cont.appendChild(row);
     },
 
-    filterRecipes(val) {
+    filterRecipes(val = "") {
         val = val.toLowerCase().trim();
-        const tbody = document.getElementById("recipeTableBody");
-        if (!tbody) return;
-
         const recipes = App.state.recipes || {};
         const items = Object.keys(recipes).sort();
+        const tbody = document.getElementById("recipeTableBody");
+        const noRecipes = document.getElementById("noRecipes");
+        if (!tbody || !noRecipes) return;
 
-        let visible = 0;
         const fragment = document.createDocumentFragment();
+        let visible = 0;
 
         items.forEach(item => {
             if (val && !item.toLowerCase().includes(val)) return;
-
             visible++;
-
+            // === RE-USE EXACT SAME ROW BUILDING LOGIC AS renderRecipeTable ===
             const recipe = recipes[item];
             const yieldAmt = Number(recipe.y) || 1;
             const weight = Number(recipe.weight) || 0;
             const costPrice = Calculator.cost(item) || 0;
 
-            // BUILD INGREDIENTS LIST WITH COSTS
             let ingredientsList = "—";
             if (recipe.i && Object.keys(recipe.i).length > 0) {
                 ingredientsList = Object.entries(recipe.i)
                     .map(([ing, qty]) => {
                         const ingCost = Calculator.cost(ing) || 0;
-                        const totalCost = (ingCost * qty).toFixed(2);
-                        return `${qty}× ${ing} ($${totalCost})`;
+                        return `${qty}× ${ing} ($${(ingCost * qty).toFixed(2)})`;
                     })
                     .join("<br>");
             }
 
             const row = document.createElement("tr");
+            if (weight === 0) {
+                row.style.background = "#0d1117";
+                row.style.borderLeft = "4px solid #0af";
+            } else {
+                row.style.background = "rgba(0, 170, 255, 0.08)";
+            }
+
             row.innerHTML = `
                 <td style="padding:12px; text-align:left;">${item}</td>
                 <td style="padding:12px; text-align:center;">${yieldAmt}</td>
-                <td style="padding:12px; text-align:center;">${weight.toFixed(2)}</td>      
+                <td style="padding:12px; text-align:center;">${weight.toFixed(2)}</td>
                 <td style="padding:12px; font-size:13px; line-height:1.6;">${ingredientsList}</td>
-                <td style="padding:12px; text-align:center;">$${costPrice.toFixed(2)}</td>
+                <td style="padding:12px; text-align:center; font-weight:bold;">$${costPrice.toFixed(2)}</td>
                 <td style="padding:12px; text-align:center;">
                     <div style="display:flex; gap:8px; align-items:center; justify-content:center;">
                         <input type="number" min="1" value="1" style="width:60px; padding:6px;" id="qty_${item.replace(/ /g, '_')}">
-                        <button onclick="Inventory.addToOrder('${item}', document.getElementById('qty_${item.replace(/ /g, '_')}').value)" 
+                        <button onclick="Inventory.addToOrder('${item}', document.getElementById('qty_${item.replace(/ /g, '_')}').value)"
                                 style="padding:8px 16px; background:#0f8; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
                             Add to Order
                         </button>
-                        <button onclick="RecipeEditor.load('${item}')" 
+                        ${hasPermission("canEditRecipes") ? `
+                        <button onclick="RecipeEditor.load('${item}')"
                                 style="padding:8px 16px; background:#0af; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
                             Edit
                         </button>
-                        <button onclick="RecipeEditor.load('${item}', true)" 
+                        <button onclick="RecipeEditor.load('${item}', true)"
                                 style="padding:8px 16px; background:#fa5; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
                             Duplicate
                         </button>
+                        ` : `
+                        <span style="color:#888; font-style:italic; font-size:14px;">(Editing restricted)</span>
+                        `}
                     </div>
                 </td>
             `;
@@ -88,12 +96,11 @@ const RecipeEditor = {
         tbody.innerHTML = "";
         tbody.appendChild(fragment);
 
-        // Show/hide "no results" message
-        const noRecipes = document.getElementById("noRecipes");
-        if (noRecipes) {
-            noRecipes.style.display = visible === 0 ? "block" : "none";
-            noRecipes.textContent = val ? "No recipes match your search" : "No recipes yet";
-        }
+        noRecipes.style.display = visible === 0 ? "block" : "none";
+        noRecipes.textContent = val ? "No recipes match your search" : "No recipes yet";
+
+        // Always apply header permissions (safe to call multiple times)
+        applyRecipePermissions();
     },
 
     filterIng(input) {
@@ -363,10 +370,17 @@ const RecipeEditor = {
 
         // Clean up UI
         document.getElementById("editArea").style.display = "none";
-        document.getElementById("recipeSearch").value = properNewName;
-
-        showToast("success", `"${properNewName}" saved with ${safeWeight.toFixed(2)} kg per item!`);
-        RecipeEditor.renderRecipeTable();
+        document.getElementById("recipeSearch").value = "";  // ← CLEAR SEARCH
+        showToast("success", `"${properNewName}" saved successfully!`);
+        RecipeEditor.renderRecipeTable();  // Full render with ALL recipes
+        // Optional: Re-search for the recipe to scroll to it
+        setTimeout(() => {
+            const search = document.getElementById("recipeSearch");
+            if (search) {
+                search.value = properNewName;
+                search.dispatchEvent(new Event("input"));  // Trigger filter to highlight it
+            }
+        }, 100);
     },
 
     async del() {
@@ -452,89 +466,7 @@ const RecipeEditor = {
     },
 
     renderRecipeTable() {
-        const tbody = document.getElementById("recipeTableBody");
-        const noRecipes = document.getElementById("noRecipes");
-        if (!tbody || !noRecipes) return;
-
-        const recipes = App.state.recipes || {};
-        const items = Object.keys(recipes).sort();
-
-        if (items.length === 0) {
-            tbody.innerHTML = "";
-            noRecipes.style.display = "block";
-            return;
-        }
-
-        noRecipes.style.display = "none";
-
-        const fragment = document.createDocumentFragment();
-
-        items.forEach(item => {
-            const recipe = recipes[item];
-            const yieldAmt = Number(recipe.y) || 1;
-            const weight = Number(recipe.weight) || 0;
-
-            // CALCULATE TOTAL COST PRICE
-            const costPrice = Calculator.cost(item) || 0;
-
-            // BUILD INGREDIENTS LIST WITH COSTS
-            let ingredientsList = "—";
-            if (recipe.i && Object.keys(recipe.i).length > 0) {
-                ingredientsList = Object.entries(recipe.i)
-                    .map(([ing, qty]) => {
-                        const ingCost = Calculator.cost(ing) || 0;
-                        const totalCost = (ingCost * qty).toFixed(2);
-                        return `${qty}× ${ing} ($${totalCost})`;
-                    })
-                    .join("<br>");
-            }
-
-            const row = document.createElement("tr");
-            // === DARKER ROW IF NO WEIGHT SET ===
-            if (weight === 0) {
-
-                row.style.background = "#0d1117";
-                row.style.borderLeft = "4px solid #0af";
-
-            } else {
-                row.style.background = "rgba(0, 170, 255, 0.08)";
-            }
-
-            row.innerHTML = `
-                <td style="padding:12px; text-align:left;">${item}</td>
-                <td style="padding:12px; text-align:center;">${yieldAmt}</td>
-                <td style="padding:12px; text-align:center;">${weight.toFixed(2)}</td>      
-                <td style="padding:12px; font-size:13px; line-height:1.6;">${ingredientsList}</td>
-                <td style="padding:12px; text-align:center; font-weight:bold;">$${costPrice.toFixed(2)}</td>
-                <td style="padding:12px; text-align:center;">
-                    <div style="display:flex; gap:8px; align-items:center; justify-content:center;">
-                        <input type="number" min="1" value="1" style="width:60px; padding:6px;" id="qty_${item.replace(/ /g, '_')}">
-                        <button onclick="Inventory.addToOrder('${item}', document.getElementById('qty_${item.replace(/ /g, '_')}').value)" 
-                                style="padding:8px 16px; background:#0f8; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
-                            Add to Order
-                        </button>
-                        ${hasPermission("canEditRecipes") ? `
-                        <button onclick="RecipeEditor.load('${item}')" 
-                                style="padding:8px 16px; background:#0af; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
-                            Edit
-                        </button>
-                        <button onclick="RecipeEditor.load('${item}', true)" 
-                                style="padding:8px 16px; background:#fa5; color:black; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">
-                            Duplicate
-                        </button>
-                        ` : `
-                        <span style="color:#888; font-style:italic; font-size:14px;">(Editing restricted)</span>
-                        `}
-                    </div>
-                </td>
-            `;
-            fragment.appendChild(row);
-        });
-
-        tbody.innerHTML = "";
-        tbody.appendChild(fragment);
-        // NEW: Apply permissions to hardcoded create button
-        applyRecipePermissions();
+        this.filterRecipes("");  // "" means show all
     },
 
     // Auto-fix ledger entries to match proper-cased recipe names
