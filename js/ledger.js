@@ -159,29 +159,35 @@ const Ledger = {
 
         entries.forEach(e => {
             let amount = 0;
+            switch (e.type) {
+                case "sale":
+                    amount = e.totalSale || 0;
+                    break;
+                case "restock_shop":
+                case "restock_warehouse":
+                    amount = 0;
+                    break;
+                case "raw_purchase":
+                case "purchase":
+                    amount = -(e.totalCost || Math.abs(e.amount) || 0);
+                    break;
+                case "commission_payment":
+                    amount = -(Math.abs(e.amount) || 0);
+                    break;
+                case "money_added":
+                    amount = Math.abs(e.amount) || 0;
+                    break;
+                case "money_removed":
+                    amount = -(Math.abs(e.amount) || 0);
+                    break;
+                default:
+                    amount = Number(e.amount) || 0;
+                    break;
+            }
+            // Now build description (keep your existing desc logic)
             let desc = e.description || e.type || "—";
             let customerInfo = "";
 
-            let amountCell = "";
-            if (e.type === "sale" && e.subtotal > e.totalSale) {
-                // Show original → final with discount highlight
-                amountCell = `
-                    <div style="text-align:right;">
-                        <div style="color:#888; text-decoration:line-through; ">
-                            $${e.subtotal.toFixed(2)}
-                        </div>
-                        <div style="font-weight:bold; color:#0ff; ">
-                            $${e.totalSale.toFixed(2)}
-                        </div>
-                    </div>
-                `;
-            } else {
-                amountCell = `
-                    <span style="font-weight:bold;color:${amount > 0 ? 'var(--green)' : 'var(--red)'}">
-                        ${amount > 0 ? "+" : ""}$${Math.abs(amount).toFixed(2)}
-                    </span>
-                `;
-            }
             if (e.type === "sale") {
                 amount = e.totalSale || 0;
                 customerInfo = e.customer && e.customer !== "Walk-in" ? ` → ${e.customer}` : "";
@@ -220,6 +226,23 @@ const Ledger = {
             } else {
                 amount = Number(e.amount) || 0;
                 desc = e.description || e.type || "Transaction";
+            }
+
+            let amountCell;
+            if (e.type === "sale" && e.subtotal > e.totalSale) {
+                // Special visual for discounted sales
+                amountCell = `
+                    <span class="amount strikethrough">$${e.subtotal.toFixed(2)}</span><br>
+                    <span class="amount positive">$${e.totalSale.toFixed(2)}</span>
+                `;
+            } else {
+                // Normal case: show the actual amount (positive or negative)
+                const colorClass = amount > 0 ? "positive" : (amount < 0 ? "negative" : "");
+                amountCell = `<span class="amount ${colorClass}">$${Math.abs(amount).toFixed(2)}</span>`;
+                // Optional: add sign explicitly if negative
+                if (amount < 0) amountCell = `<span class="amount negative">-$${Math.abs(amount).toFixed(2)}</span>`;
+                else if (amount > 0) amountCell = `<span class="amount positive">+$${amount.toFixed(2)}</span>`;
+                else amountCell = `<span class="amount">$0.00</span>`;
             }
 
             const weight = e.totalWeight || 0;
