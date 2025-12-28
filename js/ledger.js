@@ -228,21 +228,40 @@ const Ledger = {
                 desc = e.description || e.type || "Transaction";
             }
 
-            let amountCell;
+            let amountCell = "";
+
             if (e.type === "sale" && e.subtotal > e.totalSale) {
-                // Special visual for discounted sales
+                // Discounted sale: original struck through in red, discounted in green
                 amountCell = `
-                    <span class="amount strikethrough">$${e.subtotal.toFixed(2)}</span><br>
-                    <span class="amount positive">$${e.totalSale.toFixed(2)}</span>
+                    <div style="text-align:right; line-height:1.4;">
+                        <div style="color:var(--red); text-decoration:line-through; opacity:0.9;">
+                            $${e.subtotal.toFixed(2)}
+                        </div>
+                        <div style="font-weight:bold; color:var(--green); font-size:1.1em;">
+                            $${e.totalSale.toFixed(2)}
+                        </div>
+                    </div>
                 `;
             } else {
-                // Normal case: show the actual amount (positive or negative)
-                const colorClass = amount > 0 ? "positive" : (amount < 0 ? "negative" : "");
-                amountCell = `<span class="amount ${colorClass}">$${Math.abs(amount).toFixed(2)}</span>`;
-                // Optional: add sign explicitly if negative
-                if (amount < 0) amountCell = `<span class="amount negative">-$${Math.abs(amount).toFixed(2)}</span>`;
-                else if (amount > 0) amountCell = `<span class="amount positive">+$${amount.toFixed(2)}</span>`;
-                else amountCell = `<span class="amount">$0.00</span>`;
+                // Normal amounts: green for positive, red for negative, orange for zero
+                let color, prefix = "";
+
+                if (amount > 0) {
+                    color = "var(--green)";
+                    prefix = "+";
+                } else if (amount < 0) {
+                    color = "var(--red)";
+                    prefix = "-";
+                } else { // amount === 0
+                    color = "var(--orange)"; // or #ff9500 if variable not defined
+                    prefix = "";
+                }
+
+                amountCell = `
+                    <span style="font-weight:bold; color:${color};">
+                        ${prefix}$${Math.abs(amount).toFixed(2)}
+                    </span>
+                `;
             }
 
             const weight = e.totalWeight || 0;
