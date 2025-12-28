@@ -396,6 +396,15 @@ const RawMaterials = {
                 tr.style.background = "rgba(0, 170, 255, 0.08)";
                 tr.style.borderLeft = "4px solid #0af";
             }
+            // Visual badge if craftable
+            if (App.state.recipes[m]) {
+                tr.style.background = "rgba(0, 170, 255, 0.15)";
+                tr.style.borderLeft = "4px solid #0cf";
+                const nameCell = tr.querySelector("td:first-child");
+                if (nameCell) {
+                    nameCell.innerHTML += ` <small style="color:#0cf; font-weight:bold; font-size:0.8em;">[CRAFTABLE]</small>`;
+                }
+            }
 
             fragment.appendChild(tr);
         }
@@ -586,6 +595,8 @@ document.addEventListener("focusout", function (e) {
     App.save("rawPrice");
     debouncedCalcRun();
 
+    // Optional: keep flags fresh (harmless even if no recipe changes)
+    //updateRawMaterialCraftableFlags();
     // Green flash
     input.style.background = "#004400";
     input.style.transition = "background 0.4s ease";

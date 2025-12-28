@@ -42,8 +42,31 @@ const RecipeEditor = {
             const recipe = recipes[item];
             const yieldAmt = Number(recipe.y) || 1;
             const weight = Number(recipe.weight) || 0;
-            const costPrice = Calculator.cost(item) || 0;
 
+            // === TRUE RECIPE COST FROM INGREDIENTS ===
+            let recipeCost = 0;
+            if (recipe.i && Object.keys(recipe.i).length > 0) {
+                for (const [ing, qty] of Object.entries(recipe.i)) {
+                    recipeCost += (Calculator.cost(ing) || 0) * qty;
+                }
+                recipeCost = recipeCost / yieldAmt;
+            }
+
+            // === MARKET / RAW PRICE (if set) ===
+            const rawPrice = App.state.rawPrice[item]?.price || 0;
+
+            // === BUILD COST DISPLAY ===
+            let costDisplay = `<div style="font-weight:bold; color:#0f8;">Recipe: $${recipeCost.toFixed(2)}</div>`;
+            if (rawPrice > 0) {
+                const color = rawPrice < recipeCost ? "#0f8" : "#fa5"; // green if cheaper than crafting
+                costDisplay = `
+                    <div style="color:#0af; font-size:0.9em;">Market: $${rawPrice.toFixed(2)}</div>
+                    ${costDisplay}
+                    ${rawPrice < recipeCost ? `<small style="color:#0f8;">(Save $${(recipeCost - rawPrice).toFixed(2)})</small>` : ''}
+                `;
+            }
+
+            // === INGREDIENTS LIST (with individual costs) ===
             let ingredientsList = "—";
             if (recipe.i && Object.keys(recipe.i).length > 0) {
                 ingredientsList = Object.entries(recipe.i)
@@ -67,7 +90,9 @@ const RecipeEditor = {
                 <td style="padding:12px; text-align:center;">${yieldAmt}</td>
                 <td style="padding:12px; text-align:center;">${weight.toFixed(2)}</td>
                 <td style="padding:12px; font-size:13px; line-height:1.6;">${ingredientsList}</td>
-                <td style="padding:12px; text-align:center; font-weight:bold;">$${costPrice.toFixed(2)}</td>
+                <td style="padding:12px; text-align:center;">
+                    ${costDisplay}
+                </td>
                 <td style="padding:12px; text-align:center;">
                     <div style="display:flex; gap:8px; align-items:center; justify-content:center;">
                         <input type="number" min="1" value="1" style="width:60px; padding:6px;" id="qty_${item.replace(/ /g, '_')}">

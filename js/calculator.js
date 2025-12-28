@@ -61,6 +61,13 @@ const Calculator = {
 
         return App.cache.cost[item] = finalCost;
     },
+    // Detect if a raw material has a recipe → can be crafted
+    isCraftableRaw(item) {
+        const rawData = App.state.rawPrice[item];
+        if (!rawData) return false;
+        const recipe = App.state.recipes[item];
+        return !!recipe && recipe.i && Object.keys(recipe.i).length > 0;
+    },
     resolve(item, need) {
         const r = App.state.recipes[item];
         if (!r) return { [item]: need };
@@ -139,13 +146,26 @@ const Calculator = {
             topLevelCost = this.cost(item) * qty;
         }
 
-        const costDisplay = topLevelCost > 0
+        // Only show cost on main line for:
+        // - Raw items
+        // - Warehouse used items
+        // - Crafted items when actually crafting (depth 0 or expanding)
+        let showCostLine = false;
+        if (depth === 0) {
+            showCostLine = true; // always show for top-level items
+        } else if (isRaw) {
+            showCostLine = true; // show for raw children
+        } else if (userChoice === "warehouse" && canUseStock) {
+            showCostLine = true; // show for warehouse items
+        }
+
+        const costDisplay = showCostLine && topLevelCost > 0
             ? `<strong style="color:#0f8; margin-left:12px; font-size:16px;">$${topLevelCost.toFixed(2)}</strong>`
-            : '<span style="color:#666; margin-left:12px;">—</span>';
+            : (showCostLine ? '<span style="color:#666; margin-left:12px;">—</span>' : '');
 
         html += `<strong style="color:var(--accent);">${qty} × ${item}</strong>`;
         html += ` <small style="color:#0af;font-weight:bold;">(${totalWeight}kg)</small>`;
-        html += costDisplay;
+        if (showCostLine) html += costDisplay;
 
         if (!isRaw) {
             const batches = Math.ceil(qty / (r?.y || 1));
@@ -196,16 +216,95 @@ const Calculator = {
         // === WAREHOUSE STOCK MESSAGE (covers both warehouse options) ===
         if ((isCrop && (cropChoice === "warehouse" || cropChoice === "warehouse-raw")) || (!isCrop && userChoice === "warehouse")) {
             if (canUseStock) {
-                const pricingNote = cropChoice === "warehouse-raw" ? " (raw pricing)" : cropChoice === "warehouse" ? " (avg pricing)" : "";
-                return html + `<div style="margin-left:${(depth + 1) * 24}px;color:#0f8;font-style:italic;padding:6px 0;">
-                    Using ${needed} × ${item} from warehouse${pricingNote} (${totalWeight}kg)
-                </div>`;
+                // Calculate the unit cost being used
+                let unitCost = 0;
+                let note = "";
+
+                if (isCrop) {
+                    if (cropChoice === "warehouse-raw") {
+                        const rawPrice = (typeof App.state.rawPrice[item] === 'object' ? App.state.rawPrice[item].price : App.state.rawPrice[item]) || 0;
+                        unitCost = rawPrice;
+                        note = "raw pricing";
+                    } else {
+                        unitCost = Crops.getAverageCostPerUnit(item) || 0;
+                        note = "avg pricing";
+                    }
+                } else {
+                    // Non-crop (crafted item) from warehouse → uses raw price via cost()
+                    unitCost = Calculator.cost(item);
+                    if (unitCost > 0) {
+                        const rawData = App.state.rawPrice[item];
+                        note = rawData ? "market price" : "recorded cost";
+                    } else {
+                        note = "no recorded cost";
+                    }
+                }
+
+                const totalCost = (unitCost * needed).toFixed(2);
+                const unitDisplay = unitCost > 0 ? `$${unitCost.toFixed(2)}/unit` : "free";
+
+                return html += `
+                    <div style="margin-left:${(depth + 1) * 24}px; color:#0f8; font-style:italic; padding:8px 12px; background:#001122; border-radius:6px; margin-top:8px; font-size:14px;">
+                        <strong>Using ${needed} × ${item} from warehouse</strong><br>
+                        <span style="color:#0cf;">Cost: ${unitDisplay} → $${totalCost} ${note ? `(${note})` : ""}</span>
+                        <span style="margin-left:12px; color:#0af;">(${totalWeight}kg)</span>
+                    </div>`;
             }
         }
 
-        if (isRaw) return html;
 
-        // Normal crafting tree
+        if (isRaw) {
+            const rawData = App.state.rawPrice[item];
+            const marketPrice = typeof rawData === 'object' ? rawData.price : rawData || 0;
+            const marketCost = marketPrice * qty;
+
+            const isCraftable = this.isCraftableRaw(item);
+
+            let rawHTML = `<div style="margin-left:${(depth + 1) * 24}px; padding:6px 0;">`;
+
+            if (isCraftable) {
+                // Unique key for live toggle
+                const toggleKey = `rawcost→${path.concat(item).join("→")}`;
+                const userChoice = Calculator.liveToggle[toggleKey] || "market"; // default market
+
+                // Calculate crafted cost using existing cost() function (recursive!)
+                const craftedUnitCost = this.cost(item);
+                const craftedTotal = craftedUnitCost * qty;
+
+                // Unique radio group name to avoid conflicts
+                const groupName = `rawcost_${item.replace(/\s+/g, '_')}_${depth}_${Date.now()}`;
+
+                rawHTML += `
+                    <div style="background:#001a2a; padding:12px; border-radius:8px; border-left:4px solid #0af; margin:8px 0;">
+                        <div style="font-weight:bold; color:#0cf; margin-bottom:8px;">
+                            ${qty} × ${item}
+                        </div>
+                        <div style="font-size:0.95em;">
+                            <label style="display:block; margin:4px 0; color:${userChoice === 'market' ? '#0f8' : '#aaa'};">
+                                <input type="radio" name="${groupName}" value="market" 
+                                       ${userChoice === 'market' ? 'checked' : ''}
+                                       onchange="Calculator.liveToggle['${toggleKey}']='market'; debouncedCalcRun();">
+                                Market Price: $${marketPrice.toFixed(4)} → $${marketCost.toFixed(2)}
+                            </label>
+                            <label style="display:block; margin:4px 0; color:${userChoice === 'crafted' ? '#0f8' : '#aaa'};">
+                                <input type="radio" name="${groupName}" value="crafted" 
+                                       ${userChoice === 'crafted' ? 'checked' : ''}
+                                       onchange="Calculator.liveToggle['${toggleKey}']='crafted'; debouncedCalcRun();">
+                                Crafted Cost: $${craftedUnitCost.toFixed(4)} → $${craftedTotal.toFixed(2)}
+                            </label>
+                        </div>
+                    </div>`;
+            } else {
+                //rawHTML += `<span style="color:#0f8; font-weight:bold;">$${marketCost.toFixed(2)}</span>`;
+            }
+
+            rawHTML += `</div>`;
+            return html + rawHTML;
+        }
+
+
+
+        // Normal crafting tree — only runs when crafting (not using warehouse)
         const batches = Math.ceil(qty / (r?.y || 1));
         html += `<div class="tree">`;
         for (const [ing, q] of Object.entries(r.i || {})) {
@@ -219,6 +318,7 @@ const Calculator = {
 
         // 1. Clear caches once per run
         this.weights = {};
+        App.cache.cost = {};
         Calculator.liveToggle = Calculator.liveToggle || {};
 
         let totalRaw = {};
@@ -312,7 +412,20 @@ const Calculator = {
             if (!recipe?.i || Object.keys(recipe.i).length === 0) {
                 const entry = totalRaw[item] || { qty: 0 };
                 entry.qty += needed;
-                entry.unitCost = this.cost(item);  // raw or fallback
+
+                const rawData = App.state.rawPrice[item];
+                const marketPrice = typeof rawData === 'object' ? rawData.price : rawData || 0;
+
+                // Check if user chose crafted cost for this raw
+                const toggleKey = `rawcost→${path.concat(item).join("→")}`;
+                const useCrafted = Calculator.liveToggle[toggleKey] === "crafted";
+
+                if (useCrafted && this.isCraftableRaw(item)) {
+                    entry.unitCost = this.cost(item); // uses recipe ingredients recursively
+                } else {
+                    entry.unitCost = marketPrice;
+                }
+
                 totalRaw[item] = entry;
                 return;
             }
