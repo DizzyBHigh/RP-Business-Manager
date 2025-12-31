@@ -1586,90 +1586,92 @@ button:disabled {
 /* ─────── TOASTS & CONFIRM DIALOG ─────── */
 #Toast,
 #ConfirmDialog {
-    position: fixed;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 99999;
-    pointer-events: none;
-    font-family: 'Segoe UI', system-ui, sans-serif;
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 999999 !important;
+    pointer-events: auto !important;
+    max-width: 90vw !important;
+    max-height: 90vh !important;
+    width: auto !important;
 }
 
-.toast-inner,
+/* The toast-style dialog box */
 .confirmToast {
-    min-width: 320px;
-    max-width: 560px;
-    padding: 18px 24px;
-    border-radius: 16px;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    animation: toastPop 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
-    pointer-events: auto;
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, #332200, #221a00) !important;
+    color: #ffa !important;
+    border: 2px solid #fa5 !important;
+    border-radius: 16px !important;
+    padding: 24px !important;
+    max-width: 700px !important;
+    max-height: 85vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8) !important;
 }
 
-/* SUCCESS — LUSH GREEN */
-.successToast {
-    background: linear-gradient(135deg, #0f4a0f, #0a3d0a);
-    color: #0ff;
-    border-left: 6px solid #0f8;
-}
-
-/* FAIL — DEEP RED */
-.failToast {
-    background: linear-gradient(135deg, #4a0f0f, #3d0a0a);
-    color: #ff8888;
-    border-left: 6px solid #f44;
-}
-
-/* CONFIRM — ORANGE ACCENT */
-.confirmToast {
-    background: linear-gradient(135deg, #332200, #221a00);
-    color: #ffa;
-    border: 2px solid #fa5;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-}
-
+/* The message content — THIS IS THE SCROLLABLE AREA */
 .confirmToast .message {
-    font-size: 18px;
-    line-height: 1.4;
+    flex: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    max-height: 55vh !important;
+    /* Limits height, enables scroll */
+    padding-right: 16px !important;
+    /* Space for scrollbar */
+    margin: 16px 0 !important;
+    line-height: 1.6 !important;
+    font-size: 16px !important;
+    color: #ffd !important;
 }
 
+/* Custom scrollbar for WebKit browsers (Chrome, Edge, Safari) */
+.confirmToast .message::-webkit-scrollbar {
+    width: 12px;
+}
+
+.confirmToast .message::-webkit-scrollbar-track {
+    background: #111;
+    border-radius: 10px;
+}
+
+.confirmToast .message::-webkit-scrollbar-thumb {
+    background: #fa5;
+    border-radius: 10px;
+    border: 2px solid #332200;
+}
+
+.confirmToast .message::-webkit-scrollbar-thumb:hover {
+    background: #ff9966;
+}
+
+/* Buttons stay at bottom */
 .confirmToast .buttons {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
+    margin-top: auto !important;
+    padding-top: 16px !important;
+    border-top: 1px solid #fa5;
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 16px !important;
 }
 
 .confirmToast button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 10px;
-    font-weight: bold;
-    cursor: pointer;
-    min-width: 80px;
-    transition: all 0.2s;
+    padding: 12px 32px !important;
+    font-size: 18px !important;
+    font-weight: bold !important;
+    border-radius: 10px !important;
+    min-width: 100px !important;
 }
 
 .confirmToast button:first-child {
-    background: #444;
-    color: #ccc;
+    background: #444 !important;
+    color: #ccc !important;
 }
 
 .confirmToast button:last-child {
-    background: #0f8;
-    color: #000;
-}
-
-/* Icons */
-.toast-icon {
-    font-size: 32px;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+    background: #0f8 !important;
+    color: #000 !important;
 }
 
 /* Animations */
